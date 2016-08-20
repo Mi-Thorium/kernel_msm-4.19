@@ -43,6 +43,9 @@
 #include <linux/msm-bus.h>
 #include <soc/qcom/scm.h>
 
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+#include <motorola-msm8937/mach.h>
+#endif
 #if IS_ENABLED(CONFIG_MACH_XIAOMI_MSM8937)
 #include <xiaomi-msm8937/mach.h>
 #endif
@@ -4153,6 +4156,12 @@ static int msm_otg_probe(struct platform_device *pdev)
 	int id_irq = 0;
 
 	dev_info(&pdev->dev, "msm_otg probe\n");
+
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+	if (motorola_msm8937_mach_get()) {
+		floated_charger_enable = true;
+	}
+#endif
 
 #if IS_ENABLED(CONFIG_MACH_XIAOMI_MSM8937)
 	switch (xiaomi_msm8937_mach_get()) {

@@ -363,6 +363,10 @@ static struct regulator *hsusb_vdd;
 static struct regulator *vbus_otg;
 static struct power_supply *psy;
 
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+static bool mmi_ta_charger_detected = false;
+#endif
+
 static int vdd_val[VDD_VAL_MAX];
 static u32 bus_freqs[USB_NOC_NUM_VOTE][USB_NUM_BUS_CLOCKS]  /*bimc,snoc,pcnoc*/;
 static char bus_clkname[USB_NUM_BUS_CLOCKS][20] = {"bimc_clk", "snoc_clk",
@@ -2728,6 +2732,15 @@ static void msm_chg_detect_work(struct work_struct *w)
 		else if (motg->chg_type == USB_FLOATED_CHARGER ||
 					motg->chg_type == USB_CDP_CHARGER)
 			msm_otg_notify_charger(motg, IDEV_CHG_MAX);
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+		else if (motorola_msm8937_mach_get() &&
+			motg->chg_type == USB_NONCOMPLIANT_CHARGER) {
+			if (mmi_ta_charger_detected)
+				msm_otg_notify_charger(motg, 1100);
+			else
+				msm_otg_notify_charger(motg, dcp_max_current);
+		}
+#endif
 
 		msm_otg_dbg_log_event(phy, "CHG WORK PUT: CHG_TYPE",
 			motg->chg_type, get_pm_runtime_counter(phy->dev));
@@ -2942,6 +2955,12 @@ static void msm_otg_sm_work(struct work_struct *w)
 			pr_debug("b_sess_vld\n");
 			msm_otg_dbg_log_event(phy, "B_SESS_VLD",
 					motg->inputs, otg->state);
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+			if (motorola_msm8937_mach_get()) {
+				pr_info("B_FALSE_SDP - Might be a TA Charger\n");
+				mmi_ta_charger_detected = true;
+			}
+#endif
 			if (!otg->gadget) {
 				msm_otg_dbg_log_event(phy,
 					"SM WORK: Gadget Not Set",
@@ -2966,6 +2985,10 @@ static void msm_otg_sm_work(struct work_struct *w)
 			pr_debug("Cable disconnected\n");
 			msm_otg_dbg_log_event(phy, "RT: Cable DISC",
 				get_pm_runtime_counter(dev), 0);
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+			if (motorola_msm8937_mach_get())
+				mmi_ta_charger_detected = false;
+#endif
 			msm_otg_notify_charger(motg, 0);
 		}
 		break;
@@ -4914,6 +4937,10 @@ static int msm_otg_remove(struct platform_device *pdev)
 	cancel_work_sync(&motg->sm_work);
 	cancel_work_sync(&motg->notify_charger_work);
 	destroy_workqueue(motg->otg_wq);
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+	if (motorola_msm8937_mach_get())
+		mmi_ta_charger_detected = false;
+#endif
 
 	pm_runtime_resume(&pdev->dev);
 

@@ -2737,6 +2737,14 @@ static void msm_chg_detect_work(struct work_struct *w)
 		/* Enable VDP_SRC in case of DCP charger */
 		if (motg->chg_type == USB_DCP_CHARGER) {
 			ulpi_write(phy, 0x2, 0x85);
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+			if (motorola_msm8937_mach_get()) {
+				if (mmi_ta_charger_detected)
+					msm_otg_notify_charger(motg, 1100);
+				else
+					msm_otg_notify_charger(motg, 1300);
+			} else
+#endif
 			msm_otg_notify_charger(motg, dcp_max_current);
 		} else if (motg->chg_type == USB_NONCOMPLIANT_CHARGER)
 			msm_otg_notify_charger(motg, dcp_max_current);
@@ -2746,10 +2754,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 #if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
 		else if (motorola_msm8937_mach_get() &&
 			motg->chg_type == USB_NONCOMPLIANT_CHARGER) {
-			if (mmi_ta_charger_detected)
-				msm_otg_notify_charger(motg, 1100);
-			else
-				msm_otg_notify_charger(motg, dcp_max_current);
+			msm_otg_notify_charger(motg, 1000);
 		}
 #endif
 

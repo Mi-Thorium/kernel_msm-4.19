@@ -313,6 +313,7 @@ struct msm_otg {
 	bool enable_sdp_check_timer;
 
 #if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+	unsigned int mmi_chg_dcp_icl;
 	struct iio_channel *mmi_usbin_chan;
 #endif
 };

@@ -2738,7 +2738,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 				if (mmi_ta_charger_detected)
 					msm_otg_notify_charger(motg, 1100);
 				else
-					msm_otg_notify_charger(motg, 1300);
+					msm_otg_notify_charger(motg, motg->mmi_chg_dcp_icl);
 			} else
 #endif
 			msm_otg_notify_charger(motg, dcp_max_current);
@@ -4286,6 +4286,18 @@ static int msm_otg_probe(struct platform_device *pdev)
 	} else {
 		motg->core_clk_svs_rate = clk_round_rate(motg->core_clk, ret);
 	}
+
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+	if (motorola_msm8937_mach_get()) {
+		if (of_property_read_u32(pdev->dev.of_node,
+						"qcom,chg-dcp-icl", &ret)) {
+			dev_dbg(&pdev->dev, "DCP ICl not specified, use default IDEV_CHG_DCP\n");
+			motg->mmi_chg_dcp_icl = 1300;
+		} else {
+			motg->mmi_chg_dcp_icl = ret;
+		}
+	}
+#endif
 
 	motg->default_noc_mode = USB_NOC_NOM_VOTE;
 	if (of_property_read_bool(pdev->dev.of_node, "qcom,default-mode-svs")) {

@@ -42,6 +42,7 @@
 #include <linux/usb_bam.h>
 #include <linux/msm-bus.h>
 #include <soc/qcom/scm.h>
+#include <linux/iio/consumer.h>
 
 #if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
 #include <motorola-msm8937/mach.h>
@@ -228,6 +229,11 @@ struct msm_otg_platform_data {
 #define USB_PHY_1P8_VOL_MAX	1800000 /* uV */
 #define USB_PHY_1P8_HPM_LOAD	50000	/* uA */
 #define USB_PHY_1P8_LPM_LOAD	4000	/* uA */
+
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+#define MMI_ID_GND_THRESH           300000  /* 300 mV */
+#define MMI_ID_VOLTS_DEFAULT        1000000  /* 1000 mV */
+#endif
 
 #define USB_DEFAULT_SYSTEM_CLOCK 80000000	/* 80 MHz */
 
@@ -3285,6 +3291,35 @@ static void msm_otg_set_vbus_state(int online)
 		msm_otg_kick_sm_work(motg);
 }
 
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+static int mmi_msm_otg_get_ext_id_voltage(struct msm_otg *motg)
+{
+	int rc = 0;
+	int volts = MMI_ID_VOLTS_DEFAULT;
+	int result = 0;
+
+	if (IS_ERR_OR_NULL(motg->mmi_usbin_chan)) {
+		motg->mmi_usbin_chan = iio_channel_get(motg->phy.dev, "usbin");
+		if (IS_ERR(motg->mmi_usbin_chan)) {
+			pr_err("ext_id_voltage - iio_channel_get failed\n");
+			return volts;
+		}
+	}
+
+	//msm_otg_enable_ext_id(motg, 0);
+	rc = iio_read_channel_processed(motg->mmi_usbin_chan, &result);
+
+	if (rc)
+		pr_err("ext_id_voltage - Unable to read channel rc=%d\n", rc);
+	else
+		volts = result;
+
+	//msm_otg_enable_ext_id(motg, 1);
+
+	return volts;
+}
+#endif
+
 static void msm_id_status_w(struct work_struct *w)
 {
 	struct msm_otg *motg = container_of(w, struct msm_otg,
@@ -3295,9 +3330,20 @@ static void msm_id_status_w(struct work_struct *w)
 
 	if (motg->pdata->pmic_id_irq)
 		motg->id_state = msm_otg_read_pmic_id_state(motg);
-	else if (motg->ext_id_irq)
+	else if (motg->ext_id_irq) {
 		motg->id_state = gpio_get_value(motg->pdata->usb_id_gpio);
-	else if (motg->phy_irq)
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+		if (motorola_msm8937_mach_get() && !motg->id_state) {
+			int mmi_voltage = mmi_msm_otg_get_ext_id_voltage(motg);
+
+			pr_err("ext id voltage = %d microV\n", mmi_voltage);
+			if (mmi_voltage > MMI_ID_GND_THRESH) {
+				pr_err("Spurious ID GND, Ignore\n");
+				motg->id_state = 1;
+			}
+		}
+#endif
+	} else if (motg->phy_irq)
 		motg->id_state = msm_otg_read_phy_id_state(motg);
 
 	if (motg->err_event_seen)

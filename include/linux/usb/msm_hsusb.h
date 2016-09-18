@@ -311,6 +311,10 @@ struct msm_otg {
 	struct delayed_work sdp_check;
 	struct work_struct notify_charger_work;
 	bool enable_sdp_check_timer;
+
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+	struct iio_channel *mmi_usbin_chan;
+#endif
 };
 
 struct ci13xxx_platform_data {

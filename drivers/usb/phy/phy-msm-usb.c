@@ -370,6 +370,7 @@ static struct regulator *vbus_otg;
 static struct power_supply *psy;
 
 #if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+static int mmi_msm_otg_get_ext_id_voltage(struct msm_otg *motg);
 static bool mmi_ta_charger_detected = false;
 #endif
 
@@ -2839,8 +2840,21 @@ static void msm_otg_init_sm(struct msm_otg *motg)
 			} else if (motg->ext_id_irq) {
 				if (gpio_get_value(pdata->usb_id_gpio))
 					set_bit(ID, &motg->inputs);
-				else
+				else {
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+					if (motorola_msm8937_mach_get()) {
+						int mmi_id_v = mmi_msm_otg_get_ext_id_voltage(motg);
+						pr_err("id voltage at init = %d muV\n",
+										mmi_id_v);
+						if (mmi_id_v > MMI_ID_GND_THRESH) {
+							pr_err("Spurious ID GND\n");
+							set_bit(ID, &motg->inputs);
+						} else
+							clear_bit(ID, &motg->inputs);
+					} else
+#endif
 					clear_bit(ID, &motg->inputs);
+				}
 			} else if (motg->phy_irq) {
 				if (msm_otg_read_phy_id_state(motg)) {
 					set_bit(ID, &motg->inputs);

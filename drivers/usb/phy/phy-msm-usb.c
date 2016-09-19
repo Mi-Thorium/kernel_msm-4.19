@@ -3385,6 +3385,11 @@ static void msm_id_status_w(struct work_struct *w)
 					motg->inputs, motg->phy.otg->state);
 			work = 1;
 		}
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+		if (motorola_msm8937_mach_get())
+			queue_delayed_work(motg->otg_wq, &motg->id_status_work,
+				msecs_to_jiffies(1000));
+#endif
 	}
 
 	if (work && (motg->phy.otg->state != OTG_STATE_UNDEFINED)) {
@@ -3401,6 +3406,10 @@ static irqreturn_t msm_id_irq(int irq, void *data)
 {
 	struct msm_otg *motg = data;
 
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+	if (motorola_msm8937_mach_get())
+		cancel_delayed_work(&motg->id_status_work);
+#endif
 	/*schedule delayed work for 5msec for ID line state to settle*/
 	queue_delayed_work(motg->otg_wq, &motg->id_status_work,
 			msecs_to_jiffies(MSM_ID_STATUS_DELAY));

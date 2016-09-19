@@ -3386,12 +3386,17 @@ static irqreturn_t msm_id_irq(int irq, void *data)
 	struct msm_otg *motg = data;
 
 #if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
-	if (motorola_msm8937_mach_get())
+	if (motorola_msm8937_mach_get()) {
 		cancel_delayed_work(&motg->id_status_work);
+		queue_delayed_work(motg->otg_wq, &motg->id_status_work,
+				msecs_to_jiffies(150));
+	} else
 #endif
+	{
 	/*schedule delayed work for 5msec for ID line state to settle*/
 	queue_delayed_work(motg->otg_wq, &motg->id_status_work,
 			msecs_to_jiffies(MSM_ID_STATUS_DELAY));
+	}
 
 	return IRQ_HANDLED;
 }

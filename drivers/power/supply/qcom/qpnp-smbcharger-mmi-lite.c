@@ -6653,6 +6653,13 @@ static inline int get_bpd(const char *name)
 #define APSD_RERUN_BIT			BIT(0)
 #define OTG_CFG				0xF1
 #define HICCUP_ENABLED_BIT		BIT(6)
+#define OTG_EN_CTRL_MASK                SMB_MASK(3, 2)
+#define OTG_CMD_CTRL_RID_DIS            0x00
+#define OTG_PIN_CTRL_RID_DIS            0x04
+#define OTG_CMD_CTRL_RID_EN             0x08
+#define OTG_ICFG                        0xF3
+#define OTG_ILIMIT_MASK			SMB_MASK(1, 0)
+#define OTG_ILIMIT_1000MA		0x03
 #define OTG_PIN_POLARITY_BIT		BIT(4)
 #define OTG_PIN_ACTIVE_LOW		BIT(4)
 #define OTG_EN_CTRL_MASK		SMB_MASK(3, 2)
@@ -7094,6 +7101,24 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 			dev_err(chip->dev, "Couldn't set OTG OC config rc = %d\n",
 				rc);
 	}
+
+	/* configure OTG enable to cmd ctrl */
+	rc = smbchg_sec_masked_write(chip, chip->otg_base + OTG_CFG,
+			OTG_EN_CTRL_MASK,
+			OTG_CMD_CTRL_RID_DIS);
+	if (rc < 0) {
+		dev_err(chip->dev, "Couldn't set OTG EN config rc = %d\n",
+			rc);
+		return rc;
+	}
+
+	/* Configure OTG current limit */
+	rc = smbchg_sec_masked_write(chip, chip->otg_base + OTG_ICFG,
+			OTG_ILIMIT_MASK,
+			OTG_ILIMIT_1000MA);
+	if (rc < 0)
+		dev_err(chip->dev, "Couldn't set OTG current config rc = %d\n",
+			rc);
 
 	if (chip->otg_pinctrl) {
 		/* configure OTG enable to pin control active low */

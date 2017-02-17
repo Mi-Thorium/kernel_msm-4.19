@@ -26,6 +26,7 @@
 #include <linux/pwm.h>
 #include <linux/err.h>
 #include <linux/string.h>
+#include <linux/display_state.h>
 #if IS_ENABLED(CONFIG_MACH_XIAOMI_MSM8937)
 #include <xiaomi-msm8937/mach.h>
 #endif
@@ -58,6 +59,13 @@ extern void xiaomi_sdm439_ilitek_call_resume_work(void);
 #ifndef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
 DEFINE_LED_TRIGGER(bl_led_trigger);
 #endif
+
+static bool display_on = true;
+
+bool is_display_on(void)
+{
+	return display_on;
+}
 
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 {
@@ -1186,6 +1194,8 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		return -EINVAL;
 	}
 
+	display_on = true;
+
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -1301,6 +1311,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
+
+	display_on = false;
 
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,

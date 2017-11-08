@@ -8821,7 +8821,7 @@ static int fg_memif_init(struct fg_chip *chip)
 
 		/* check for error condition */
 		rc = fg_check_ima_exception(chip, true);
-		if (rc) {
+		if (rc && rc != -EAGAIN) {
 			pr_err("Error in clearing IMA exception rc=%d", rc);
 			return rc;
 		}

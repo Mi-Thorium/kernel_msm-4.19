@@ -1363,4 +1363,22 @@ config TOUCHSCREEN_GEN_VKEYS
 	 To compile this driver as a module, choose M here: the
 	 module will be called gen_vkeys.
 
+
+config TOUCHSCREEN_SWEEP2WAKE
+        tristate "Sweep2Wake for touchscreens"
+	select TOUCHSCREEN_PREVENT_SLEEP
+        default n
+
+config TOUCHSCREEN_DOUBLETAP2WAKE
+	tristate "DoubleTap2Wake for touchscreens"
+	select TOUCHSCREEN_PREVENT_SLEEP
+	default n
+
+config TOUCHSCREEN_PREVENT_SLEEP
+	bool "Inihibit sleep on modified touchscreen drivers"
+	default n
+	depends on TOUCHSCREEN_SWEEP2WAKE || TOUCHSCREEN_DOUBLETAP2WAKE
+	help
+	  This disables the sleep function of modified touchscreen drivers.
+
 endif

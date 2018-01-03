@@ -12,5 +12,4 @@ obj-$(CONFIG_COMMON_CLK_MSM)	+= gdsc.o
 
 obj-$(CONFIG_MSM_CLK_CONTROLLER_V2)	+= msm-clock-controller.o
 
-
-
+obj-y               += mdss/

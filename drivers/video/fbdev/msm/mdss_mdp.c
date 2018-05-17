@@ -39,14 +39,15 @@
 #include <linux/spinlock.h>
 #include <linux/semaphore.h>
 #include <linux/uaccess.h>
-#include <linux/clk/msm-clk.h>
+#include <linux/clk.h>
+#include <linux/clk/qcom.h>
 #include <linux/irqdomain.h>
 #include <linux/irq.h>
 
 #include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
 #include <soc/qcom/scm.h>
-#include <soc/qcom/rpm-smd.h>
+#include <linux/soc/qcom/smd-rpm.h>
 
 #include "mdss.h"
 #include "mdss_fb.h"
@@ -275,6 +276,12 @@ static int mdss_mdp_parse_dt_bus_scale(struct platform_device *pdev);
 static int mdss_mdp_parse_dt_ppb_off(struct platform_device *pdev);
 static int mdss_mdp_parse_dt_cdm(struct platform_device *pdev);
 static int mdss_mdp_parse_dt_dsc(struct platform_device *pdev);
+
+static int scm_restore_sec_cfg(u32 device_id, u32 spare, int *scm_ret)
+{
+	/* This function doesn't seem to be applicbale for 4.14 */
+	return 0;
+}
 
 static inline u32 is_mdp_irq_enabled(void)
 {
@@ -2138,13 +2145,6 @@ static u32 mdss_mdp_res_init(struct mdss_data_type *mdata)
 	mdata->hist_intr.state = 0;
 	spin_lock_init(&mdata->hist_intr.lock);
 
-	mdata->iclient = msm_ion_client_create(mdata->pdev->name);
-	if (IS_ERR_OR_NULL(mdata->iclient)) {
-		pr_err("msm_ion_client_create() return error (%pK)\n",
-				mdata->iclient);
-		mdata->iclient = NULL;
-	}
-
 	return rc;
 }
 
@@ -3632,7 +3632,7 @@ static int mdss_mdp_cdm_addr_setup(struct mdss_data_type *mdata,
 	for (i = 0; i < len; i++) {
 		head[i].num = i;
 		head[i].base = (mdata->mdss_io.base) + cdm_offsets[i];
-		atomic_set(&head[i].kref.refcount, 0);
+		refcount_set(&head[i].kref.refcount, 0);
 		mutex_init(&head[i].lock);
 		init_completion(&head[i].free_comp);
 		pr_debug("%s: cdm off (%d) = %pK\n", __func__, i, head[i].base);
@@ -4864,59 +4864,6 @@ exit:
 	return;
 }
 
-#define RPM_MISC_REQ_TYPE 0x6373696d
-#define RPM_MISC_REQ_SVS_PLUS_KEY 0x2B737673
-
-static void mdss_mdp_config_cx_voltage(struct mdss_data_type *mdata, int enable)
-{
-	int ret = 0;
-	static struct msm_rpm_kvp rpm_kvp;
-	static uint8_t svs_en;
-
-	if (!mdata->en_svs_high)
-		return;
-
-	if (!rpm_kvp.key) {
-		rpm_kvp.key = RPM_MISC_REQ_SVS_PLUS_KEY;
-		rpm_kvp.length = sizeof(uint64_t);
-		pr_debug("%s: Initialized rpm_kvp structure\n", __func__);
-	}
-
-	if (enable) {
-		svs_en = 1;
-		rpm_kvp.data = &svs_en;
-		pr_debug("%s: voting for svs high\n", __func__);
-		ret = msm_rpm_send_message(MSM_RPM_CTX_ACTIVE_SET,
-					RPM_MISC_REQ_TYPE, 0,
-					&rpm_kvp, 1);
-		if (ret)
-			pr_err("vote for active_set svs high failed: %d\n",
-					ret);
-		ret = msm_rpm_send_message(MSM_RPM_CTX_SLEEP_SET,
-					RPM_MISC_REQ_TYPE, 0,
-					&rpm_kvp, 1);
-		if (ret)
-			pr_err("vote for sleep_set svs high failed: %d\n",
-					ret);
-	} else {
-		svs_en = 0;
-		rpm_kvp.data = &svs_en;
-		pr_debug("%s: Removing vote for svs high\n", __func__);
-		ret = msm_rpm_send_message(MSM_RPM_CTX_ACTIVE_SET,
-					RPM_MISC_REQ_TYPE, 0,
-					&rpm_kvp, 1);
-		if (ret)
-			pr_err("Remove vote:active_set svs high failed: %d\n",
-					ret);
-		ret = msm_rpm_send_message(MSM_RPM_CTX_SLEEP_SET,
-					RPM_MISC_REQ_TYPE, 0,
-					&rpm_kvp, 1);
-		if (ret)
-			pr_err("Remove vote:sleep_set svs high failed: %d\n",
-					ret);
-	}
-}
-
 static int mdss_mdp_cx_ctrl(struct mdss_data_type *mdata, int enable)
 {
 	int rc = 0;
@@ -5014,8 +4961,6 @@ static void mdss_mdp_footswitch_ctrl(struct mdss_data_type *mdata, int on)
 				mdss_mdp_batfet_ctrl(mdata, true);
 			}
 		}
-		if (mdata->en_svs_high)
-			mdss_mdp_config_cx_voltage(mdata, true);
 		mdata->fs_ena = true;
 	} else {
 		if (mdata->fs_ena) {
@@ -5041,8 +4986,6 @@ static void mdss_mdp_footswitch_ctrl(struct mdss_data_type *mdata, int on)
 					PERIPH_RETAIN_OFF);
 			}
 			mdata->mem_retain = true;
-			if (mdata->en_svs_high)
-				mdss_mdp_config_cx_voltage(mdata, false);
 			regulator_disable(mdata->fs);
 			if (mdata->venus)
 				regulator_disable(mdata->venus);
@@ -5070,14 +5013,10 @@ int mdss_mdp_secure_display_ctrl(struct mdss_data_type *mdata,
 	desc.args[0] = request.enable = enable;
 	desc.arginfo = SCM_ARGS(1);
 
-	if (!is_scm_armv8()) {
-		ret = scm_call(SCM_SVC_MP, MEM_PROTECT_SD_CTRL,
-			&request, sizeof(request), &resp, sizeof(resp));
-	} else {
-		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP,
-				mem_protect_sd_ctrl_id), &desc);
-		resp = desc.ret[0];
-	}
+	/* Fix this as per latest scm calls */
+	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP,
+			mem_protect_sd_ctrl_id), &desc);
+	resp = desc.ret[0];
 
 	pr_debug("scm_call MEM_PROTECT_SD_CTRL(%u): ret=%d, resp=%x",
 				enable, ret, resp);

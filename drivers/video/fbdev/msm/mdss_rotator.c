@@ -24,6 +24,7 @@
 #include <linux/msm-bus-board.h>
 #include <linux/regulator/consumer.h>
 #include <linux/sync_file.h>
+#include <linux/sched/clock.h>
 
 #include "mdss_rotator_internal.h"
 #include "mdss_mdp.h"

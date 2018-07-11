@@ -878,6 +878,9 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 				mdss_dsi_panel_bklt_dcs(sctrl, bl_level);
 		}
 		break;
+	case BL_TLMM_GPIO:
+		pr_debug("%s: No backlight scaling allowed\n", __func__);
+		break;
 	default:
 		pr_err("%s: Unknown bl_ctrl configuration\n",
 			__func__);
@@ -2388,6 +2391,10 @@ int mdss_panel_parse_bl_settings(struct device_node *np,
 				ctrl_pdata->bklt_dcs_op_mode = DSI_LP_MODE;
 
 			pr_debug("%s: Configured DCS_CMD bklt ctrl\n",
+								__func__);
+		} else if (!strcmp(data, "bl_ctrl_tlmm_gpio")) {
+			ctrl_pdata->bklt_ctrl = BL_TLMM_GPIO;
+			pr_debug("%s: Configured TLMM_GPIO bklt ctrl\n",
 								__func__);
 		}
 	}

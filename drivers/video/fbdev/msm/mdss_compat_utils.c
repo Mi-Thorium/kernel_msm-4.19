@@ -2860,6 +2860,7 @@ static int __pp_compat_alloc(struct msmfb_mdp_pp32 __user *pp32,
 					uint32_t op)
 {
 	uint32_t alloc_size = 0, lut_type, pgc_size = 0;
+	struct mdp_lut_cfg_data *lut_data;
 
 	alloc_size = sizeof(struct msmfb_mdp_pp);
 	switch (op) {
@@ -2881,25 +2882,25 @@ static int __pp_compat_alloc(struct msmfb_mdp_pp32 __user *pp32,
 				return -ENOMEM;
 			if (clear_user(*pp, alloc_size))
 				return -EFAULT;
+			lut_data = &(*pp)->data.lut_cfg_data;
 			if (put_user((struct mdp_ar_gc_lut_data *)
 				((unsigned long) *pp +
 				sizeof(struct msmfb_mdp_pp)),
-			&(*pp)->data.lut_cfg_data.data.pgc_lut_data.r_data) ||
+				&(lut_data->data.pgc_lut_data.r_data)) ||
 				put_user((struct mdp_ar_gc_lut_data *)
 					((unsigned long) *pp +
 					sizeof(struct msmfb_mdp_pp) +
 					pgc_size),
-			&(*pp)->data.lut_cfg_data.data.pgc_lut_data.g_data) ||
+				&(lut_data->data.pgc_lut_data.g_data)) ||
 				put_user((struct mdp_ar_gc_lut_data *)
 					((unsigned long) *pp +
 					sizeof(struct msmfb_mdp_pp) +
 					(2 * pgc_size)),
-			&(*pp)->data.lut_cfg_data.data.pgc_lut_data.b_data) ||
+				&(lut_data->data.pgc_lut_data.b_data)) ||
 				put_user((void *)((unsigned long) *pp +
 					sizeof(struct msmfb_mdp_pp) +
 					(3 * pgc_size)),
-					&(*pp)->data.lut_cfg_data.data.
-						pgc_lut_data.cfg_payload))
+				&(lut_data->data.pgc_lut_data.cfg_payload)))
 				return -EFAULT;
 			break;
 		case mdp_lut_igc:
@@ -2912,10 +2913,10 @@ static int __pp_compat_alloc(struct msmfb_mdp_pp32 __user *pp32,
 			}
 			if (clear_user(*pp, alloc_size))
 				return -EFAULT;
+			lut_data = &(*pp)->data.lut_cfg_data;
 			if (put_user((void *)((unsigned long)(*pp) +
 					sizeof(struct msmfb_mdp_pp)),
-					&(*pp)->data.lut_cfg_data.data.
-						igc_lut_data.cfg_payload))
+				&(lut_data->data.igc_lut_data.cfg_payload)))
 				return -EFAULT;
 			break;
 		case mdp_lut_hist:
@@ -2928,10 +2929,10 @@ static int __pp_compat_alloc(struct msmfb_mdp_pp32 __user *pp32,
 			}
 			if (clear_user(*pp, alloc_size))
 				return -EFAULT;
+			lut_data = &(*pp)->data.lut_cfg_data;
 			if (put_user((void *)((unsigned long)(*pp) +
 					sizeof(struct msmfb_mdp_pp)),
-					&(*pp)->data.lut_cfg_data.data.
-						hist_lut_data.cfg_payload))
+				&(lut_data->data.hist_lut_data.cfg_payload)))
 				return -EFAULT;
 			break;
 		default:

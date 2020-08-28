@@ -245,6 +245,7 @@ err:
 	for (i--; i >= 0; i--) {
 		mdss_smmu = mdss_smmu_get_cb(i);
 		if (mdss_smmu && mdss_smmu->dev) {
+			msm_dma_unmap_all_for_dev(mdss_smmu->base.dev);
 			arm_iommu_detach_device(mdss_smmu->dev);
 			mdss_smmu_enable_power(mdss_smmu, false);
 			mdss_smmu->domain_attached = false;

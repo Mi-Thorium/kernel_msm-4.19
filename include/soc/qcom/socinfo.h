@@ -100,6 +100,8 @@
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,msm8937")
 #define early_machine_is_msm8917()	\
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,msm8917")
+#define early_machine_is_msm8940()	\
+	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,msm8940")
 #define early_machine_is_sdm439()	\
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,sdm439")
 #define early_machine_is_sdm429()	\
@@ -153,6 +155,7 @@
 #define early_machine_is_bengalp_iot()	0
 #define early_machine_is_msm8937()	0
 #define early_machine_is_msm8917()	0
+#define early_machine_is_msm8940()	0
 #define early_machine_is_sdm439()	0
 #define early_machine_is_sdm429()	0
 #define early_machine_is_qm215()	0
@@ -204,6 +207,7 @@ enum msm_cpu {
 	MSM_CPU_BENGALP_IOT,
 	MSM_CPU_8937,
 	MSM_CPU_8917,
+	MSM_CPU_8940,
 	MSM_CPU_SDM439,
 	MSM_CPU_SDM429,
 	MSM_CPU_QM215,

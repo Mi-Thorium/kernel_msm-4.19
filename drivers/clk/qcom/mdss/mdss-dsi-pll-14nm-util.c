@@ -1096,6 +1096,13 @@ int pll_vco_prepare_14nm(struct clk_hw *hw)
 		return -EINVAL;
 	}
 
+	/* Skip vco recalculation for continuous splash use case */
+	if (pll->handoff_resources) {
+		pr_debug("%s: Skip recalculation during cont splash\n",
+						__func__);
+		return rc;
+	}
+
 	rc = mdss_pll_resource_enable(pll, true);
 	if (rc) {
 		pr_err("ndx=%d Failed to enable mdss dsi pll resources\n",

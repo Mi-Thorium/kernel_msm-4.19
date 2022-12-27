@@ -1,7 +1,18 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2013-2018, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 1994 Martin Schaller
  *
+ * 2001 - Documented with DocBook
+ * - Brad Douglas <brad@neruo.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
 #include <linux/compat.h>
@@ -108,9 +119,9 @@ static unsigned int __do_compat_ioctl_nr(unsigned int cmd32)
 static void  __copy_atomic_commit_struct(struct mdp_layer_commit  *commit,
 	struct mdp_layer_commit32 *commit32)
 {
-	unsigned int destSize = sizeof(commit->commit_v1.reserved);
-	unsigned int srcSize = sizeof(commit32->commit_v1.reserved);
-	unsigned int count = (destSize <= srcSize ? destSize : srcSize);
+	unsigned int destsize = sizeof(commit->commit_v1.reserved);
+	unsigned int srcsize = sizeof(commit32->commit_v1.reserved);
+	unsigned int count = (destsize <= srcsize ? destsize : srcsize);
 
 	commit->version = commit32->version;
 	commit->commit_v1.flags = commit32->commit_v1.flags;
@@ -210,7 +221,6 @@ static struct mdp_input_layer *__create_layer_list(
 
 		layer->flags = layer32->flags;
 		layer->pipe_ndx = layer32->pipe_ndx;
-		layer->rect_num = layer32->rect_num;
 		layer->horz_deci = layer32->horz_deci;
 		layer->vert_deci = layer32->vert_deci;
 		layer->z_order = layer32->z_order;
@@ -296,6 +306,7 @@ static int __compat_atomic_commit(struct fb_info *info, unsigned int cmd,
 	struct mdp_input_layer *layer_list = NULL;
 	struct mdp_input_layer32 *layer_list32 = NULL;
 	struct mdp_output_layer *output_layer = NULL;
+	struct mdp_frc_info *frc_info = NULL;
 
 	/* copy top level memory from 32 bit structure to kernel memory */
 	ret = copy_from_user(&commit32, (void __user *)argp,
@@ -316,6 +327,7 @@ static int __compat_atomic_commit(struct fb_info *info, unsigned int cmd,
 		output_layer = kzalloc(buffer_size, GFP_KERNEL);
 		if (!output_layer)
 			return -ENOMEM;
+
 		ret = copy_from_user(output_layer,
 				compat_ptr(commit32.commit_v1.output_layer),
 				buffer_size);
@@ -356,6 +368,29 @@ static int __compat_atomic_commit(struct fb_info *info, unsigned int cmd,
 		}
 	}
 
+	if (commit32.commit_v1.frc_info) {
+		int buffer_size = sizeof(struct mdp_frc_info);
+
+		frc_info = kzalloc(buffer_size, GFP_KERNEL);
+		if (!frc_info) {
+			ret = -ENOMEM;
+			goto frc_err;
+		}
+
+		ret = copy_from_user(frc_info,
+				compat_ptr(commit32.commit_v1.frc_info),
+				buffer_size);
+		if (ret) {
+			pr_err("fail to copy frc info from user, ptr %p\n",
+				compat_ptr(commit32.commit_v1.frc_info));
+			kfree(frc_info);
+			ret = -EFAULT;
+			goto frc_err;
+		}
+
+		commit.commit_v1.frc_info = frc_info;
+	}
+
 	ret = mdss_fb_atomic_commit(info, &commit, file);
 	if (ret)
 		pr_err("atomic commit failed ret:%d\n", ret);
@@ -368,6 +403,9 @@ static int __compat_atomic_commit(struct fb_info *info, unsigned int cmd,
 		kfree(layer_list[i].scale);
 		mdss_mdp_free_layer_pp_info(&layer_list[i]);
 	}
+
+	kfree(frc_info);
+frc_err:
 	kfree(layer_list);
 layer_list_err:
 	kfree(layer_list32);
@@ -509,7 +547,7 @@ static int mdss_fb_compat_buf_sync(struct fb_info *info, unsigned int cmd,
 		if (buf_sync->flags & MDP_BUF_SYNC_FLAG_RETIRE_FENCE)
 			return -EFAULT;
 		pr_debug("%s: no retire fence fd for wb\n",
-				__func__);
+			__func__);
 	}
 
 	return ret;
@@ -2822,7 +2860,6 @@ static int __pp_compat_alloc(struct msmfb_mdp_pp32 __user *pp32,
 					uint32_t op)
 {
 	uint32_t alloc_size = 0, lut_type, pgc_size = 0;
-	struct mdp_lut_cfg_data *lut_data;
 
 	alloc_size = sizeof(struct msmfb_mdp_pp);
 	switch (op) {
@@ -2844,25 +2881,25 @@ static int __pp_compat_alloc(struct msmfb_mdp_pp32 __user *pp32,
 				return -ENOMEM;
 			if (clear_user(*pp, alloc_size))
 				return -EFAULT;
-			lut_data = &(*pp)->data.lut_cfg_data;
 			if (put_user((struct mdp_ar_gc_lut_data *)
 				((unsigned long) *pp +
 				sizeof(struct msmfb_mdp_pp)),
-				&(lut_data->data.pgc_lut_data.r_data)) ||
+			&(*pp)->data.lut_cfg_data.data.pgc_lut_data.r_data) ||
 				put_user((struct mdp_ar_gc_lut_data *)
 					((unsigned long) *pp +
 					sizeof(struct msmfb_mdp_pp) +
 					pgc_size),
-				&(lut_data->data.pgc_lut_data.g_data)) ||
+			&(*pp)->data.lut_cfg_data.data.pgc_lut_data.g_data) ||
 				put_user((struct mdp_ar_gc_lut_data *)
 					((unsigned long) *pp +
 					sizeof(struct msmfb_mdp_pp) +
 					(2 * pgc_size)),
-				&(lut_data->data.pgc_lut_data.b_data)) ||
+			&(*pp)->data.lut_cfg_data.data.pgc_lut_data.b_data) ||
 				put_user((void *)((unsigned long) *pp +
 					sizeof(struct msmfb_mdp_pp) +
 					(3 * pgc_size)),
-				&(lut_data->data.pgc_lut_data.cfg_payload)))
+					&(*pp)->data.lut_cfg_data.data.
+						pgc_lut_data.cfg_payload))
 				return -EFAULT;
 			break;
 		case mdp_lut_igc:
@@ -2875,10 +2912,10 @@ static int __pp_compat_alloc(struct msmfb_mdp_pp32 __user *pp32,
 			}
 			if (clear_user(*pp, alloc_size))
 				return -EFAULT;
-			lut_data = &(*pp)->data.lut_cfg_data;
 			if (put_user((void *)((unsigned long)(*pp) +
 					sizeof(struct msmfb_mdp_pp)),
-				&(lut_data->data.igc_lut_data.cfg_payload)))
+					&(*pp)->data.lut_cfg_data.data.
+						igc_lut_data.cfg_payload))
 				return -EFAULT;
 			break;
 		case mdp_lut_hist:
@@ -2891,10 +2928,10 @@ static int __pp_compat_alloc(struct msmfb_mdp_pp32 __user *pp32,
 			}
 			if (clear_user(*pp, alloc_size))
 				return -EFAULT;
-			lut_data = &(*pp)->data.lut_cfg_data;
 			if (put_user((void *)((unsigned long)(*pp) +
 					sizeof(struct msmfb_mdp_pp)),
-				&(lut_data->data.hist_lut_data.cfg_payload)))
+					&(*pp)->data.lut_cfg_data.data.
+						hist_lut_data.cfg_payload))
 				return -EFAULT;
 			break;
 		default:
@@ -3778,7 +3815,7 @@ static int __copy_layer_pp_info_params(struct mdp_input_layer *layer,
 		goto exit;
 	}
 
-	pp_info = kzalloc(sizeof(struct mdp_overlay_pp_params), GFP_KERNEL);
+	pp_info = kmalloc(sizeof(struct mdp_overlay_pp_params), GFP_KERNEL);
 	if (!pp_info) {
 		ret = -ENOMEM;
 		goto exit;

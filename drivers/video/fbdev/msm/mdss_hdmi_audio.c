@@ -1,5 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2016, 2018, 2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2016, 2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
@@ -10,6 +19,7 @@
 #include <linux/mutex.h>
 #include <linux/iopoll.h>
 #include <linux/types.h>
+#include <linux/extcon.h>
 #include <linux/gcd.h>
 
 #include "mdss_hdmi_audio.h"
@@ -53,8 +63,9 @@ enum hdmi_audio_sample_rates {
 };
 
 struct hdmi_audio {
-	struct dss_io_data *io;
-	struct msm_ext_disp_audio_setup_params params;
+	struct mdss_io_data *io;
+	struct msm_hdmi_audio_setup_params params;
+	struct extcon_dev sdev;
 	u32 pclk;
 	bool ack_enabled;
 	bool audio_ack_enabled;
@@ -99,7 +110,7 @@ static void hdmi_audio_get_acr_param(u32 pclk, u32 fs,
 	u32 div, mul;
 
 	if (!acr) {
-		pr_err("invalid audio acr data\n");
+		pr_err("invalid data\n");
 		return;
 	}
 
@@ -132,14 +143,14 @@ static void hdmi_audio_get_acr_param(u32 pclk, u32 fs,
 
 static void hdmi_audio_acr_enable(struct hdmi_audio *audio)
 {
-	struct dss_io_data *io;
+	struct mdss_io_data *io;
 	struct hdmi_audio_acr acr;
-	struct msm_ext_disp_audio_setup_params *params;
+	struct msm_hdmi_audio_setup_params *params;
 	u32 pclk, layout, multiplier = 1, sample_rate;
 	u32 acr_pkt_ctl, aud_pkt_ctl2, acr_reg_cts, acr_reg_n;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		return;
 	}
 
@@ -151,7 +162,7 @@ static void hdmi_audio_acr_enable(struct hdmi_audio *audio)
 	hdmi_audio_get_acr_param(pclk * HDMI_KHZ_TO_HZ, sample_rate, &acr);
 	hdmi_audio_get_audio_sample_rate(&sample_rate);
 
-	layout = (params->num_of_channels == AUDIO_CHANNEL_2) ? 0 : 1;
+	layout = params->num_of_channels == AUDIO_CHANNEL_2 ? 0 : 1;
 
 	pr_debug("n=%u, cts=%u, layout=%u\n", acr.n, acr.cts, layout);
 
@@ -249,14 +260,14 @@ static void hdmi_audio_acr_setup(struct hdmi_audio *audio, bool on)
 
 static void hdmi_audio_infoframe_setup(struct hdmi_audio *audio, bool enabled)
 {
-	struct dss_io_data *io = NULL;
+	struct mdss_io_data *io = NULL;
 	u32 channels, channel_allocation, level_shift, down_mix, layout;
 	u32 hdmi_debug_reg = 0, audio_info_0_reg = 0, audio_info_1_reg = 0;
 	u32 audio_info_ctrl_reg, aud_pck_ctrl_2_reg;
 	u32 check_sum, sample_present;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		return;
 	}
 
@@ -278,7 +289,7 @@ static void hdmi_audio_infoframe_setup(struct hdmi_audio *audio, bool enabled)
 	down_mix           = audio->params.down_mix;
 	sample_present     = audio->params.sample_present;
 
-	layout = (audio->params.num_of_channels == AUDIO_CHANNEL_2) ? 0 : 1;
+	layout = audio->params.num_of_channels == AUDIO_CHANNEL_2 ? 0 : 1;
 	aud_pck_ctrl_2_reg = BIT(0) | (layout << 1);
 	DSS_REG_W(io, HDMI_AUDIO_PKT_CTRL2, aud_pck_ctrl_2_reg);
 
@@ -317,13 +328,13 @@ end:
 }
 
 static int hdmi_audio_on(void *ctx, u32 pclk,
-	struct msm_ext_disp_audio_setup_params *params)
+	struct msm_hdmi_audio_setup_params *params)
 {
 	struct hdmi_audio *audio = ctx;
 	int rc = 0;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		rc = -EINVAL;
 		goto end;
 	}
@@ -349,7 +360,7 @@ static void hdmi_audio_off(void *ctx)
 	struct hdmi_audio *audio = ctx;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		return;
 	}
 
@@ -359,21 +370,105 @@ static void hdmi_audio_off(void *ctx)
 	pr_debug("HDMI Audio: Disabled\n");
 }
 
+static void hdmi_audio_notify(void *ctx, int val)
+{
+	struct hdmi_audio *audio = ctx;
+	int state = 0;
+	bool switched;
+
+	if (!audio) {
+		pr_err("invalid input\n");
+		return;
+	}
+
+	state = audio->sdev.state;
+	if (state == val)
+		return;
+
+	if (audio->ack_enabled &&
+		atomic_read(&audio->ack_pending)) {
+		pr_err("%s ack pending, not notifying %s\n",
+			state ? "connect" : "disconnect",
+			val ? "connect" : "disconnect");
+		return;
+	}
+
+	extcon_set_state_sync(&audio->sdev, 0, val);
+	switched = audio->sdev.state != state;
+
+	if (audio->ack_enabled && switched)
+		atomic_set(&audio->ack_pending, 1);
+
+	pr_debug("audio %s %s\n", switched ? "switched to" : "same as",
+		audio->sdev.state ? "HDMI" : "SPKR");
+}
+
+static void hdmi_audio_ack(void *ctx, u32 ack, u32 hpd)
+{
+	struct hdmi_audio *audio = ctx;
+	u32 ack_hpd;
+
+	if (!audio) {
+		pr_err("invalid input\n");
+		return;
+	}
+
+	if (ack & AUDIO_ACK_SET_ENABLE) {
+		audio->ack_enabled = ack & AUDIO_ACK_ENABLE ?
+			true : false;
+
+		pr_debug("audio ack feature %s\n",
+			audio->ack_enabled ? "enabled" : "disabled");
+		return;
+	}
+
+	if (!audio->ack_enabled)
+		return;
+
+	atomic_set(&audio->ack_pending, 0);
+
+	ack_hpd = ack & AUDIO_ACK_CONNECT;
+
+	pr_debug("acknowledging %s\n",
+		ack_hpd ? "connect" : "disconnect");
+
+	if (ack_hpd != hpd) {
+		pr_debug("unbalanced audio state, ack %d, hpd %d\n",
+			ack_hpd, hpd);
+
+		hdmi_audio_notify(ctx, hpd);
+	}
+}
+
 static void hdmi_audio_reset(void *ctx)
 {
 	struct hdmi_audio *audio = ctx;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		return;
 	}
 
 	atomic_set(&audio->ack_pending, 0);
 }
 
+static void hdmi_audio_status(void *ctx, struct hdmi_audio_status *status)
+{
+	struct hdmi_audio *audio = ctx;
+
+	if (!audio || !status) {
+		pr_err("invalid input\n");
+		return;
+	}
+
+	status->ack_enabled = audio->ack_enabled;
+	status->ack_pending = atomic_read(&audio->ack_pending);
+	status->switched = audio->sdev.state;
+}
+
 /**
- * hdmi_audio_register() - audio registration function
- * @data: registration initialization data
+ * hdmi_audio_register() - audio registeration function
+ * @data: registeration initialization data
  *
  * This API configures audio module for client to use HDMI audio.
  * Provides audio functionalities which client can call.
@@ -385,6 +480,7 @@ static void hdmi_audio_reset(void *ctx)
 void *hdmi_audio_register(struct hdmi_audio_init_data *data)
 {
 	struct hdmi_audio *audio = NULL;
+	int rc = 0;
 
 	if (!data)
 		goto end;
@@ -393,12 +489,22 @@ void *hdmi_audio_register(struct hdmi_audio_init_data *data)
 	if (!audio)
 		goto end;
 
+	audio->sdev.name = "hdmi_audio";
+	rc = extcon_dev_register(&audio->sdev);
+	if (rc) {
+		pr_err("audio switch registration failed\n");
+		kzfree(audio);
+		goto end;
+	}
+
 	audio->io = data->io;
 
 	data->ops->on     = hdmi_audio_on;
 	data->ops->off    = hdmi_audio_off;
+	data->ops->notify = hdmi_audio_notify;
+	data->ops->ack    = hdmi_audio_ack;
 	data->ops->reset  = hdmi_audio_reset;
-
+	data->ops->status = hdmi_audio_status;
 end:
 	return audio;
 }
@@ -413,6 +519,8 @@ void hdmi_audio_unregister(void *ctx)
 {
 	struct hdmi_audio *audio = ctx;
 
-	if (audio)
+	if (audio) {
+		extcon_dev_unregister(&audio->sdev);
 		kfree(ctx);
+	}
 }

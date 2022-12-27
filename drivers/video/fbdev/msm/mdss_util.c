@@ -1,6 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-only
 
-/* Copyright (c) 2007-2018, 2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2007-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
@@ -205,6 +214,24 @@ void mdss_disable_irq_wake(struct mdss_hw *hw)
 		pr_warn("MDSS HW ndx=%d is NOT set\n", hw->hw_ndx);
 }
 
+static bool check_display(char *param_string)
+{
+	char *str = NULL;
+	bool display_disable = false;
+
+	str = strnstr(param_string, ";", MDSS_MAX_PANEL_LEN);
+	if (!str)
+		return display_disable;
+
+	str = strnstr(str, ":", MDSS_MAX_PANEL_LEN);
+	if (!str)
+		return display_disable;
+	else if (str[1] == '1')
+		display_disable = 1;
+
+	return display_disable;
+}
+
 struct mdss_util_intf mdss_util = {
 	.register_irq = mdss_register_irq,
 	.enable_irq = mdss_enable_irq,
@@ -220,7 +247,9 @@ struct mdss_util_intf mdss_util = {
 	.bus_scale_set_quota = NULL,
 	.panel_intf_type = NULL,
 	.panel_intf_status = NULL,
-	.mdp_probe_done = false
+	.mdp_probe_done = false,
+	.param_check = check_display,
+	.display_disabled = false
 };
 
 struct mdss_util_intf *mdss_get_util_intf()

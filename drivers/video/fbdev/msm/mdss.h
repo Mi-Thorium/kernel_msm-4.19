@@ -1,5 +1,15 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #ifndef MDSS_H
 #define MDSS_H
@@ -12,14 +22,10 @@
 #include <linux/irqreturn.h>
 #include <linux/irqdomain.h>
 #include <linux/mdss_io_util.h>
-#include <linux/mdss_smmu_ext.h>
 
 #include <linux/msm-bus.h>
 #include <linux/file.h>
 #include <linux/dma-direction.h>
-#include <soc/qcom/cx_ipeak.h>
-#include <linux/dma-buf.h>
-#include <linux/iommu.h>
 
 #include "mdss_panel.h"
 
@@ -37,8 +43,6 @@ enum mdss_mdp_clk_type {
 	MDSS_CLK_MDP_LUT,
 	MDSS_CLK_MDP_VSYNC,
 	MDSS_CLK_MNOC_AHB,
-	MDSS_CLK_THROTTLE_AXI,
-	MDSS_CLK_BIMC,
 	MDSS_MAX_CLK
 };
 
@@ -158,9 +162,8 @@ enum mdss_hw_quirk {
 	MDSS_QUIRK_FMT_PACK_PATTERN,
 	MDSS_QUIRK_NEED_SECURE_MAP,
 	MDSS_QUIRK_SRC_SPLIT_ALWAYS,
-	MDSS_QUIRK_MMSS_GDSC_COLLAPSE,
-	MDSS_QUIRK_MDP_CLK_SET_RATE,
 	MDSS_QUIRK_HDR_SUPPORT_ENABLED,
+	MDSS_QUIRK_MDP_CLK_SET_RATE,
 	MDSS_QUIRK_MAX,
 };
 
@@ -172,10 +175,6 @@ enum mdss_hw_capabilities {
 	MDSS_CAPS_QSEED3,
 	MDSS_CAPS_DEST_SCALER,
 	MDSS_CAPS_10_BIT_SUPPORTED,
-	MDSS_CAPS_CWB_SUPPORTED,
-	MDSS_CAPS_MDP_VOTE_CLK_NOT_SUPPORTED,
-	MDSS_CAPS_AVR_SUPPORTED,
-	MDSS_CAPS_SEC_DETACH_SMMU,
 	MDSS_CAPS_MAX,
 };
 
@@ -190,8 +189,6 @@ enum mdss_qos_settings {
 	MDSS_QOS_TS_PREFILL,
 	MDSS_QOS_REMAPPER,
 	MDSS_QOS_IB_NOCR,
-	MDSS_QOS_WB2_WRITE_GATHER_EN,
-	MDSS_QOS_WB_QOS,
 	MDSS_QOS_MAX,
 };
 
@@ -204,15 +201,6 @@ enum mdss_mdp_pipe_type {
 	MDSS_MDP_PIPE_TYPE_MAX,
 };
 
-enum mdss_mdp_intf_index {
-	MDSS_MDP_NO_INTF,
-	MDSS_MDP_INTF0,
-	MDSS_MDP_INTF1,
-	MDSS_MDP_INTF2,
-	MDSS_MDP_INTF3,
-	MDSS_MDP_MAX_INTF
-};
-
 struct reg_bus_client {
 	char name[MAX_CLIENT_NAME_LEN];
 	short usecase_ndx;
@@ -221,15 +209,13 @@ struct reg_bus_client {
 };
 
 struct mdss_smmu_client {
-	struct mdss_smmu_intf base;
-	struct iommu_domain	*domain;
-	struct dss_module_power mp;
+	struct device *dev;
+	struct dma_iommu_mapping *mmu_mapping;
+	struct mdss_module_power mp;
 	struct reg_bus_client *reg_bus_clt;
 	bool domain_attached;
-	bool domain_reattach;
 	bool handoff_pending;
-	void __iomem *mmu_base;
-	struct list_head _client;
+	char __iomem *mmu_base;
 };
 
 struct mdss_mdp_qseed3_lut_tbl {
@@ -288,27 +274,28 @@ struct mdss_smmu_ops {
 	void (*smmu_dsi_unmap_buffer)(dma_addr_t dma_addr, int domain,
 			unsigned long size, int dir);
 	void (*smmu_deinit)(struct mdss_data_type *mdata);
+	struct sg_table * (*smmu_sg_table_clone)(struct sg_table *orig_table,
+			gfp_t gfp_mask, bool padding);
 };
 
 struct mdss_data_type {
 	u32 mdp_rev;
 	struct clk *mdp_clk[MDSS_MAX_CLK];
 	struct regulator *fs;
-	struct regulator *core_gdsc;
+	struct regulator *venus;
 	struct regulator *vdd_cx;
-	u32 vdd_cx_min_uv;
-	u32 vdd_cx_max_uv;
 	bool batfet_required;
 	struct regulator *batfet;
 	bool en_svs_high;
 	u32 max_mdp_clk_rate;
 	struct mdss_util_intf *mdss_util;
+	struct mdss_panel_data *pdata;
 	unsigned long mdp_clk_rate;
 
 	struct platform_device *pdev;
-	struct dss_io_data mdss_io;
-	struct dss_io_data vbif_io;
-	struct dss_io_data vbif_nrt_io;
+	struct mdss_io_data mdss_io;
+	struct mdss_io_data vbif_io;
+	struct mdss_io_data vbif_nrt_io;
 	char __iomem *mdp_base;
 
 	struct mdss_smmu_client mdss_smmu[MDSS_IOMMU_MAX_DOMAIN];
@@ -344,7 +331,6 @@ struct mdss_data_type {
 	u32 wfd_mode;
 	u32 has_no_lut_read;
 	atomic_t sd_client_count;
-	atomic_t sc_client_count;
 	u8 has_wb_ad;
 	u8 has_non_scalar_rgb;
 	bool has_src_split;
@@ -360,8 +346,6 @@ struct mdss_data_type {
 	u32 default_ot_wr_limit;
 
 	struct irq_domain *irq_domain;
-	u32 *mdp_irq_raw;
-	u32 *mdp_irq_export;
 	u32 *mdp_irq_mask;
 	u32 mdp_hist_irq_mask;
 	u32 mdp_intf_irq_mask;
@@ -414,6 +398,8 @@ struct mdss_data_type {
 	u32 *vbif_rt_qos;
 	u32 *vbif_nrt_qos;
 	u32 npriority_lvl;
+	u32 rot_dwnscale_min;
+	u32 rot_dwnscale_max;
 
 	struct mult_factor ab_factor;
 	struct mult_factor ib_factor;
@@ -487,9 +473,9 @@ struct mdss_data_type {
 
 	struct mdss_intr hist_intr;
 
+	struct ion_client *iclient;
 	int iommu_attached;
 
-	u32 dbg_bus_flags;
 	struct debug_bus *dbg_bus;
 	u32 dbg_bus_size;
 	struct vbif_debug_bus *vbif_dbg_bus;
@@ -503,6 +489,7 @@ struct mdss_data_type {
 	u32 min_prefill_lines; /* this changes within different chipsets */
 	u32 props;
 
+	bool twm_en;
 	int handoff_pending;
 	bool idle_pc;
 	struct mdss_perf_tune perf_tune;
@@ -538,14 +525,8 @@ struct mdss_data_type {
 	u32 bcolor2;
 	struct mdss_scaler_block *scaler_off;
 
-	u32 max_dest_scaler_input_width;
-	u32 max_dest_scaler_output_width;
-	struct mdss_mdp_destination_scaler *ds;
-	u32 sec_disp_en;
-	u32 sec_cam_en;
-	u32 sec_session_cnt;
-	wait_queue_head_t secure_waitq;
-	struct cx_ipeak_client *mdss_cx_ipeak;
+	u32 splash_intf_sel;
+	u32 splash_split_disp;
 	struct mult_factor bus_throughput_factor;
 };
 
@@ -590,15 +571,13 @@ struct mdss_util_intf {
 	int (*iommu_ctrl)(int enable);
 	void (*iommu_lock)(void);
 	void (*iommu_unlock)(void);
-	void (*vbif_reg_lock)(void);
-	void (*vbif_reg_unlock)(void);
-	int (*secure_session_ctrl)(int enable);
 	void (*bus_bandwidth_ctrl)(int enable);
 	int (*bus_scale_set_quota)(int client, u64 ab_quota, u64 ib_quota);
 	int (*panel_intf_status)(u32 disp_num, u32 intf_type);
 	struct mdss_panel_cfg* (*panel_intf_type)(int intf_val);
 	int (*dyn_clk_gating_ctrl)(int enable);
-	bool (*mdp_handoff_pending)(void);
+	bool (*param_check)(char *param_string);
+	bool display_disabled;
 };
 
 struct mdss_util_intf *mdss_get_util_intf(void);
@@ -610,14 +589,6 @@ static inline int mdss_get_sd_client_cnt(void)
 		return 0;
 	else
 		return atomic_read(&mdss_res->sd_client_count);
-}
-
-static inline int mdss_get_sc_client_cnt(void)
-{
-	if (!mdss_res)
-		return 0;
-	else
-		return atomic_read(&mdss_res->sc_client_count);
 }
 
 static inline void mdss_set_quirk(struct mdss_data_type *mdata,
@@ -633,14 +604,14 @@ static inline bool mdss_has_quirk(struct mdss_data_type *mdata,
 }
 
 #define MDSS_VBIF_WRITE(mdata, offset, value, nrt_vbif) \
-		(nrt_vbif ? dss_reg_w(&mdata->vbif_nrt_io, offset, value, 0) :\
-		dss_reg_w(&mdata->vbif_io, offset, value, 0))
+		(nrt_vbif ? mdss_reg_w(&mdata->vbif_nrt_io, offset, value, 0) :\
+		mdss_reg_w(&mdata->vbif_io, offset, value, 0))
 #define MDSS_VBIF_READ(mdata, offset, nrt_vbif) \
-		(nrt_vbif ? dss_reg_r(&mdata->vbif_nrt_io, offset, 0) :\
-		dss_reg_r(&mdata->vbif_io, offset, 0))
+		(nrt_vbif ? mdss_reg_r(&mdata->vbif_nrt_io, offset, 0) :\
+		mdss_reg_r(&mdata->vbif_io, offset, 0))
 #define MDSS_REG_WRITE(mdata, offset, value) \
-		dss_reg_w(&mdata->mdss_io, offset, value, 0)
+		mdss_reg_w(&mdata->mdss_io, offset, value, 0)
 #define MDSS_REG_READ(mdata, offset) \
-		dss_reg_r(&mdata->mdss_io, offset, 0)
+		mdss_reg_r(&mdata->mdss_io, offset, 0)
 
 #endif /* MDSS_H */

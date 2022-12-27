@@ -1,5 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2014-2018, 2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
@@ -33,7 +43,7 @@ static struct mdss_mdp_cdm *mdss_mdp_cdm_alloc(struct mdss_data_type *mdata)
 
 	for (i = 0; i < mdata->ncdm; i++) {
 		cdm = mdata->cdm_off + i;
-		if (refcount_read(&cdm->kref.refcount) == 0) {
+		if (atomic_read(&cdm->kref.refcount) == 0) {
 			kref_init(&cdm->kref);
 			cdm->mdata = mdata;
 			pr_debug("alloc cdm=%d\n", cdm->num);
@@ -120,6 +130,7 @@ struct mdss_mdp_cdm *mdss_mdp_cdm_init(struct mdss_mdp_ctl *ctl, u32 intf_type)
 static int mdss_mdp_cdm_csc_setup(struct mdss_mdp_cdm *cdm,
 				  struct mdp_cdm_cfg *data)
 {
+	int rc = 0;
 	u32 op_mode = 0;
 
 	mdss_mdp_csc_setup(MDSS_MDP_BLOCK_CDM, cdm->num, data->csc_type);
@@ -138,7 +149,7 @@ static int mdss_mdp_cdm_csc_setup(struct mdss_mdp_cdm *cdm,
 
 	writel_relaxed(op_mode, cdm->base + MDSS_MDP_REG_CDM_CSC_10_OPMODE);
 
-	return 0;
+	return rc;
 }
 
 /**

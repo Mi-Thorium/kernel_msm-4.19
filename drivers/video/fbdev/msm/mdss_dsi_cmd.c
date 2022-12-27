@@ -1,5 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2016, 2018, 2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2012-2016, 2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -133,7 +143,7 @@ static int mdss_dsi_generic_swrite(struct dsi_buf *dp, struct dsi_cmd_desc *cm)
 	int len;
 
 	dchdr = &cm->dchdr;
-	if (dchdr->dlen && !cm->payload) {
+	if (dchdr->dlen && cm->payload == 0) {
 		pr_err("%s: NO payload error\n", __func__);
 		return 0;
 	}
@@ -176,7 +186,7 @@ static int mdss_dsi_generic_read(struct dsi_buf *dp, struct dsi_cmd_desc *cm)
 	int len;
 
 	dchdr = &cm->dchdr;
-	if (dchdr->dlen && !cm->payload) {
+	if (dchdr->dlen && cm->payload == 0) {
 		pr_err("%s: NO payload error\n", __func__);
 		return 0;
 	}
@@ -266,7 +276,7 @@ static int mdss_dsi_dcs_swrite(struct dsi_buf *dp, struct dsi_cmd_desc *cm)
 	int len;
 
 	dchdr = &cm->dchdr;
-	if (!cm->payload) {
+	if (cm->payload == 0) {
 		pr_err("%s: NO payload error\n", __func__);
 		return -EINVAL;
 	}
@@ -299,7 +309,7 @@ static int mdss_dsi_dcs_swrite1(struct dsi_buf *dp, struct dsi_cmd_desc *cm)
 	u32 *hp;
 
 	dchdr = &cm->dchdr;
-	if (dchdr->dlen < 2 || (!cm->payload)) {
+	if (dchdr->dlen < 2 || cm->payload == 0) {
 		pr_err("%s: NO payload error\n", __func__);
 		return -EINVAL;
 	}
@@ -330,7 +340,7 @@ static int mdss_dsi_dcs_read(struct dsi_buf *dp, struct dsi_cmd_desc *cm)
 	u32 *hp;
 
 	dchdr = &cm->dchdr;
-	if (!cm->payload) {
+	if (cm->payload == 0) {
 		pr_err("%s: NO payload error\n", __func__);
 		return -EINVAL;
 	}
@@ -473,7 +483,7 @@ static int mdss_dsi_set_max_pktsize(struct dsi_buf *dp, struct dsi_cmd_desc *cm)
 	u32 *hp;
 
 	dchdr = &cm->dchdr;
-	if (!cm->payload) {
+	if (cm->payload == 0) {
 		pr_err("%s: NO payload error\n", __func__);
 		return 0;
 	}
@@ -500,7 +510,7 @@ static int mdss_dsi_compression_mode(struct dsi_buf *dp,
 	u32 *hp;
 
 	dchdr = &cm->dchdr;
-	if (!cm->payload) {
+	if (cm->payload == 0) {
 		pr_err("%s: NO payload error\n", __func__);
 		return 0;
 	}

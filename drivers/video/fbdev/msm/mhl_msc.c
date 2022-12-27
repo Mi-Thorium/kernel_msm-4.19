@@ -1,5 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2013-2014, 2018, 2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2013-2014, 2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #include <linux/types.h>
 #include <linux/delay.h>
@@ -552,7 +562,7 @@ int mhl_msc_recv_set_int(struct mhl_tx_ctrl *mhl_ctrl,
 		}
 		if (set_int & MHL_INT_GRT_WRT) {
 			/* SET_INT: GRT_WRT */
-			pr_debug("%s: recvd req to permit/grant write\n",
+			pr_debug("%s: recvd req to permit/grant write",
 				 __func__);
 			complete_all(&mhl_ctrl->req_write_done);
 			mhl_msc_write_burst(

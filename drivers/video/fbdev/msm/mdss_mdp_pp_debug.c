@@ -1,6 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014, 2018, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, 2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  */
 
@@ -36,39 +44,39 @@ void pp_print_lut(void *data, int size, char *tab, uint32_t type)
 	buf[0] = '\0';
 	for (i = 0; i < lines; i++) {
 		buf[0] = '\0';
-		read += scnprintf(buf, MAX_LINE_BUFFER_SIZE - read,
+		read += snprintf(buf, MAX_LINE_BUFFER_SIZE - read,
 			"%s", tab);
 		for (j = 0; j < 16; j++) {
 			if (type == UINT32)
-				read += scnprintf(buf + read,
+				read += snprintf(buf + read,
 					MAX_LINE_BUFFER_SIZE - read, "%04x ",
 					((uint32_t *)data)[i*16+j]);
 			else if (type == UINT16)
-				read += scnprintf(buf + read,
+				read += snprintf(buf + read,
 					MAX_LINE_BUFFER_SIZE - read, "%02x ",
 					((uint16_t *)data)[i*16+j]);
 		}
 		snprintf(buf + read, MAX_LINE_BUFFER_SIZE - read, "\n");
 
-		pr_debug("%s\n", buf);
+		pr_debug("%s", buf);
 		memset(buf, 0, sizeof(char) * MAX_LINE_BUFFER_SIZE);
 		read = 0;
 	}
 
 	lines = size % 16;
-	read += scnprintf(buf, MAX_LINE_BUFFER_SIZE - read, "%s", tab);
+	read += snprintf(buf, MAX_LINE_BUFFER_SIZE - read, "%s", tab);
 	for (i = 0; i < lines; i++) {
 		if (type == UINT32)
-			read += scnprintf(buf + read,
+			read += snprintf(buf + read,
 					MAX_LINE_BUFFER_SIZE - read, "%04x ",
 					((uint32_t *)data)[last_start+i]);
 		else if (type == UINT16)
-			read += scnprintf(buf + read,
+			read += snprintf(buf + read,
 					MAX_LINE_BUFFER_SIZE - read, "%02x ",
 					((uint16_t *)data)[last_start+i]);
 	}
 	snprintf(buf + read, MAX_LINE_BUFFER_SIZE - read, "\n");
-	pr_debug("%s\n", buf);
+	pr_debug("%s", buf);
 }
 
 void pp_print_pcc_coeff(struct mdp_pcc_coeff *pcc_coeff, int tab_depth)

@@ -1,10 +1,20 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2008-2018, 2020-2021, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2008-2018,2020, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #ifndef MDSS_FB_H
 #define MDSS_FB_H
 
-#include <linux/ion.h>
+#include <linux/msm_ion.h>
 #include <linux/list.h>
 #include <linux/msm_mdp_ext.h>
 #include <linux/types.h>
@@ -223,12 +233,10 @@ struct msm_mdp_interface {
 	int (*configure_panel)(struct msm_fb_data_type *mfd, int mode,
 				int dest_ctrl);
 	int (*input_event_handler)(struct msm_fb_data_type *mfd);
-	void (*footswitch_ctrl)(bool on);
 	int (*pp_release_fnc)(struct msm_fb_data_type *mfd);
 	void (*signal_retire_fence)(struct msm_fb_data_type *mfd,
 					int retire_cnt);
-	int (*enable_panel_disable_mode)(struct msm_fb_data_type *mfd,
-		bool disable_panel);
+	bool (*is_twm_en)(void);
 	void *private1;
 };
 
@@ -307,14 +315,14 @@ struct msm_fb_data_type {
 	u64 bl_level;
 	u64 bl_extn_level;
 	u32 bl_scale;
+	u32 bl_min_lvl;
 	u32 unset_bl_level;
 	bool allow_bl_update;
 	u32 bl_level_scaled;
-	u32 bl_level_usr;
 	struct mutex bl_lock;
 	struct mutex mdss_sysfs_lock;
-	struct mutex sd_lock;
 	bool ipc_resume;
+	bool allow_secure_bl_update;
 
 	struct platform_device *pdev;
 
@@ -348,6 +356,8 @@ struct msm_fb_data_type {
 
 	u32 dcm_state;
 	struct list_head file_list;
+	struct ion_client *fb_ion_client;
+	struct ion_handle *fb_ion_handle;
 	struct dma_buf *fbmem_buf;
 	struct dma_buf_attachment *fb_attachment;
 	struct sg_table *fb_table;
@@ -379,17 +389,13 @@ static inline void mdss_fb_update_notify_update(struct msm_fb_data_type *mfd)
 	if (needs_complete) {
 		complete(&mfd->update.comp);
 		mutex_lock(&mfd->no_update.lock);
-		del_timer(&(mfd->no_update.timer));
+		if (mfd->no_update.timer.function)
+			del_timer(&(mfd->no_update.timer));
+
 		mfd->no_update.timer.expires = jiffies + (2 * HZ);
 		add_timer(&mfd->no_update.timer);
 		mutex_unlock(&mfd->no_update.lock);
 	}
-}
-
-/* Function returns true for split link */
-static inline bool is_panel_split_link(struct msm_fb_data_type *mfd)
-{
-	return mfd && mfd->panel_info && mfd->panel_info->split_link_enabled;
 }
 
 /* Function returns true for either any kind of dual display */
@@ -439,7 +445,6 @@ static inline bool mdss_fb_is_power_on_ulp(struct msm_fb_data_type *mfd)
 	return mdss_panel_is_power_on_ulp(mfd->panel_power_state);
 }
 
-
 static inline bool mdss_fb_is_hdmi_primary(struct msm_fb_data_type *mfd)
 {
 	return (mfd && (mfd->index == 0) &&
@@ -475,7 +480,4 @@ void mdss_panelinfo_to_fb_var(struct mdss_panel_info *pinfo,
 						struct fb_var_screeninfo *var);
 void mdss_fb_calc_fps(struct msm_fb_data_type *mfd);
 void mdss_fb_idle_pc(struct msm_fb_data_type *mfd);
-extern struct dma_buf *ion_alloc(size_t len, unsigned int heap_id_mask,
-							unsigned int flags);
-
 #endif /* MDSS_FB_H */

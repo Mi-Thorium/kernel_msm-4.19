@@ -1,5 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2014, 2018, 2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2012-2014, 2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #include <linux/bitops.h>
 #include <linux/delay.h>
@@ -193,7 +203,7 @@ int mhl_i2c_reg_read(struct i2c_client *client,
 	int rc = -1;
 	uint8_t buffer = 0;
 
-	rc = dss_i2c_byte_read(client, slave_addrs[slave_addr_index],
+	rc = mdss_i2c_byte_read(client, slave_addrs[slave_addr_index],
 				reg_offset, &buffer);
 	if (rc) {
 		pr_err("%s: slave=%x, off=%x\n",
@@ -208,7 +218,7 @@ int mhl_i2c_reg_write(struct i2c_client *client,
 			     uint8_t slave_addr_index, uint8_t reg_offset,
 			     uint8_t value)
 {
-	return dss_i2c_byte_write(client, slave_addrs[slave_addr_index],
+	return mdss_i2c_byte_write(client, slave_addrs[slave_addr_index],
 				 reg_offset, &value);
 }
 
@@ -230,7 +240,7 @@ static int mhl_tx_get_dt_data(struct device *dev,
 {
 	int i, rc = 0;
 	struct device_node *of_node = NULL;
-	struct dss_gpio *temp_gpio = NULL;
+	struct mdss_gpio *temp_gpio = NULL;
 	struct platform_device *hdmi_pdev = NULL;
 	struct device_node *hdmi_tx_node = NULL;
 	int dt_gpio;
@@ -252,7 +262,7 @@ static int mhl_tx_get_dt_data(struct device *dev,
 
 	/* GPIOs */
 	temp_gpio = NULL;
-	temp_gpio = devm_kzalloc(dev, sizeof(struct dss_gpio), GFP_KERNEL);
+	temp_gpio = devm_kzalloc(dev, sizeof(struct mdss_gpio), GFP_KERNEL);
 	pr_debug("%s: gpios allocd\n", __func__);
 	if (!(temp_gpio)) {
 		pr_err("%s: can't alloc %d gpio mem\n", __func__, i);
@@ -273,7 +283,7 @@ static int mhl_tx_get_dt_data(struct device *dev,
 
 	/* PWR */
 	temp_gpio = NULL;
-	temp_gpio = devm_kzalloc(dev, sizeof(struct dss_gpio), GFP_KERNEL);
+	temp_gpio = devm_kzalloc(dev, sizeof(struct mdss_gpio), GFP_KERNEL);
 	pr_debug("%s: gpios allocd\n", __func__);
 	if (!(temp_gpio)) {
 		pr_err("%s: can't alloc %d gpio mem\n", __func__, i);
@@ -293,7 +303,7 @@ static int mhl_tx_get_dt_data(struct device *dev,
 
 	/* INTR */
 	temp_gpio = NULL;
-	temp_gpio = devm_kzalloc(dev, sizeof(struct dss_gpio), GFP_KERNEL);
+	temp_gpio = devm_kzalloc(dev, sizeof(struct mdss_gpio), GFP_KERNEL);
 	pr_debug("%s: gpios allocd\n", __func__);
 	if (!(temp_gpio)) {
 		pr_err("%s: can't alloc %d gpio mem\n", __func__, i);
@@ -331,6 +341,9 @@ static int mhl_tx_get_dt_data(struct device *dev,
 	return 0;
 error:
 	pr_err("%s: ret due to err\n", __func__);
+	for (i = 0; i < MHL_TX_MAX_GPIO; i++)
+		if (pdata->gpios[i])
+			devm_kfree(dev, pdata->gpios[i]);
 	return rc;
 } /* mhl_tx_get_dt_data */
 
@@ -1270,7 +1283,7 @@ int mhl_send_msc_command(struct mhl_tx_ctrl *mhl_ctrl,
 	if (!req)
 		return -EFAULT;
 
-	pr_debug("%s: command=0x%02x offset=0x%02x %02x %02x\n",
+	pr_debug("%s: command=0x%02x offset=0x%02x %02x %02x",
 		 __func__,
 		 req->command,
 		 req->offset,
@@ -1703,7 +1716,7 @@ vreg_config_failed:
 static int mhl_gpio_config(struct mhl_tx_ctrl *mhl_ctrl, int on)
 {
 	int ret;
-	struct dss_gpio *temp_reset_gpio, *temp_intr_gpio;
+	struct mdss_gpio *temp_reset_gpio, *temp_intr_gpio;
 
 	/* caused too many line spills */
 	temp_reset_gpio = mhl_ctrl->pdata->gpios[MHL_TX_RESET_GPIO];
@@ -1775,13 +1788,13 @@ static int mhl_i2c_probe(struct i2c_client *client,
 			rc = -ENOMEM;
 			goto failed_no_mem;
 		}
+
 		rc = mhl_tx_get_dt_data(&client->dev, pdata);
 		if (rc) {
 			pr_err("%s: FAILED: parsing device tree data; rc=%d\n",
 				__func__, rc);
 			goto failed_dt_data;
 		}
-
 		mhl_ctrl->i2c_handle = client;
 		mhl_ctrl->pdata = pdata;
 		i2c_set_clientdata(client, mhl_ctrl);
@@ -1926,8 +1939,18 @@ failed_probe_pwr:
 	power_supply_unregister(&mhl_ctrl->mhl_psy);
 failed_probe:
 	mhl_sii_config(mhl_ctrl, false);
+	/* do not deep-free */
+	if (mhl_info)
+		devm_kfree(&client->dev, mhl_info);
 failed_dt_data:
+	if (pdata)
+		devm_kfree(&client->dev, pdata);
 failed_no_mem:
+	if (mhl_ctrl)
+		devm_kfree(&client->dev, mhl_ctrl);
+	mhl_info = NULL;
+	pdata = NULL;
+	mhl_ctrl = NULL;
 	pr_err("%s: PROBE FAILED, rc=%d\n", __func__, rc);
 	return rc;
 }
@@ -1946,6 +1969,11 @@ static int mhl_i2c_remove(struct i2c_client *client)
 
 	destroy_workqueue(mhl_ctrl->mhl_workq);
 
+	if (mhl_ctrl->mhl_info)
+		devm_kfree(&client->dev, mhl_ctrl->mhl_info);
+	if (mhl_ctrl->pdata)
+		devm_kfree(&client->dev, mhl_ctrl->pdata);
+	devm_kfree(&client->dev, mhl_ctrl);
 	return 0;
 }
 
@@ -2048,6 +2076,7 @@ const struct of_device_id mhl_match_table[] = {
 static struct i2c_driver mhl_sii_i2c_driver = {
 	.driver = {
 		.name = MHL_DRIVER_NAME,
+		.owner = THIS_MODULE,
 		.of_match_table = mhl_match_table,
 #ifdef CONFIG_PM_SLEEP
 		.pm = &mhl_i2c_pm_ops,

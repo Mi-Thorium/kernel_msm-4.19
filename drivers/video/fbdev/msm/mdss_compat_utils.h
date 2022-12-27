@@ -1,6 +1,14 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2014-2018, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, 2018,2020, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  */
 
@@ -10,10 +18,12 @@
 /*
  * To allow proper structure padding for 64bit/32bit target
  */
+#ifndef MDP_LAYER_COMMIT_V1_PAD
 #ifdef __LP64
 #define MDP_LAYER_COMMIT_V1_PAD 2
 #else
 #define MDP_LAYER_COMMIT_V1_PAD 3
+#endif
 #endif
 
 struct mdp_buf_sync32 {
@@ -78,6 +88,8 @@ struct msmfb_metadata32 {
 		uint32_t video_info_code;
 		struct mdss_hw_caps caps;
 		uint8_t secure_en;
+		bool sec_bl_update_en;
+		bool sec_reg_on;
 	} data;
 };
 
@@ -507,8 +519,7 @@ struct mdp_input_layer32 {
 	struct mdp_layer_buffer	buffer;
 	compat_caddr_t		pp_info;
 	int			error_code;
-	uint32_t		rect_num;
-	uint32_t		reserved[5];
+	uint32_t		reserved[6];
 };
 
 struct mdp_output_layer32 {

@@ -1299,7 +1299,9 @@ static inline void __mdss_mdp_reg_access_clk_enable(
 		mdss_mdp_clk_update(MDSS_CLK_AHB, 1);
 		mdss_mdp_clk_update(MDSS_CLK_AXI, 1);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_CORE, 1);
+		mdss_mdp_clk_update(MDSS_CLK_BIMC, 1);
 	} else {
+		mdss_mdp_clk_update(MDSS_CLK_BIMC, 0);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_CORE, 0);
 		mdss_mdp_clk_update(MDSS_CLK_AXI, 0);
 		mdss_mdp_clk_update(MDSS_CLK_AHB, 0);
@@ -1341,6 +1343,7 @@ static void __mdss_mdp_clk_control(struct mdss_data_type *mdata, bool enable)
 		mdss_mdp_clk_update(MDSS_CLK_AXI, 1);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_CORE, 1);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_LUT, 1);
+		mdss_mdp_clk_update(MDSS_CLK_BIMC, 1);
 		if (mdata->vsync_ena)
 			mdss_mdp_clk_update(MDSS_CLK_MDP_VSYNC, 1);
 	} else {
@@ -1351,6 +1354,7 @@ static void __mdss_mdp_clk_control(struct mdss_data_type *mdata, bool enable)
 		if (mdata->vsync_ena)
 			mdss_mdp_clk_update(MDSS_CLK_MDP_VSYNC, 0);
 
+		mdss_mdp_clk_update(MDSS_CLK_BIMC, 0);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_LUT, 0);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_CORE, 0);
 		mdss_mdp_clk_update(MDSS_CLK_AXI, 0);
@@ -1826,6 +1830,9 @@ static int mdss_mdp_irq_clk_setup(struct mdss_data_type *mdata)
 
 	/* vsync_clk is optional for non-smart panels */
 	mdss_mdp_irq_clk_register(mdata, "vsync_clk", MDSS_CLK_MDP_VSYNC);
+
+	/* this optional clock is needed for DDR memory access on few targets */
+	mdss_mdp_irq_clk_register(mdata, "bimc_clk", MDSS_CLK_BIMC);
 
 	/* this clk is not present on all MDSS revisions */
 	mdss_mdp_irq_clk_register(mdata, "mnoc_clk", MDSS_CLK_MNOC_AHB);

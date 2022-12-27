@@ -3020,7 +3020,7 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 			mdp5_data->sd_enabled = 0;
 	}
 
-	mdss_fb_update_notify_update(mfd);
+	// mdss_fb_update_notify_update(mfd);
 commit_fail:
 	ATRACE_BEGIN("overlay_cleanup");
 	mdss_mdp_overlay_cleanup(mfd, &mdp5_data->pipes_destroy);

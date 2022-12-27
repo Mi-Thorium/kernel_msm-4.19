@@ -123,16 +123,15 @@ static int mdss_fb_send_panel_event(struct msm_fb_data_type *mfd,
 static void mdss_fb_set_mdp_sync_pt_threshold(struct msm_fb_data_type *mfd,
 		int type);
 
-void mdss_fb_no_update_notify_timer_cb(unsigned long data)
+void mdss_fb_no_update_notify_timer_cb(struct timer_list *t)
 {
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)data;
+	struct disp_info_notify *disp_notify =
+					from_timer(disp_notify, t, timer);
 
-	if (!mfd) {
-		pr_err("%s mfd NULL\n", __func__);
-		return;
-	}
-	mfd->no_update.value = NOTIFY_TYPE_NO_UPDATE;
-	complete(&mfd->no_update.comp);
+	if (!disp_notify)
+		pr_err("Disp notify ptr is NULL\n");
+	disp_notify->value = NOTIFY_TYPE_NO_UPDATE;
+	complete(&disp_notify->comp);
 }
 
 void mdss_fb_bl_update_notify(struct msm_fb_data_type *mfd,
@@ -2773,9 +2772,8 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 	atomic_set(&mfd->ioctl_ref_cnt, 0);
 	atomic_set(&mfd->kickoff_pending, 0);
 
-	init_timer(&mfd->no_update.timer);
-	mfd->no_update.timer.function = mdss_fb_no_update_notify_timer_cb;
-	mfd->no_update.timer.data = (unsigned long)mfd;
+	timer_setup(&mfd->no_update.timer, mdss_fb_no_update_notify_timer_cb,
+			 (unsigned long)mfd);
 	mfd->update.ref_count = 0;
 	mfd->no_update.ref_count = 0;
 	mfd->update.init_done = false;

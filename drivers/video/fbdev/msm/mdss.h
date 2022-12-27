@@ -212,7 +212,7 @@ struct reg_bus_client {
 
 struct mdss_smmu_client {
 	struct device *dev;
-	struct dma_iommu_mapping *mmu_mapping;
+	struct iommu_domain	*domain;
 	struct dss_module_power mp;
 	struct reg_bus_client *reg_bus_clt;
 	bool domain_attached;

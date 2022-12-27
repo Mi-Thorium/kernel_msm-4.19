@@ -430,7 +430,7 @@ int mdss_wait_sync_fence(struct mdss_fence *fence,
  */
 struct mdss_fence *mdss_get_fd_sync_fence(int fd)
 {
-	struct fence *fence = NULL;
+	struct dma_fence *fence = NULL;
 
 	fence = sync_file_get_fence(fd);
 	return to_mdss_fence(fence);
@@ -476,14 +476,14 @@ int mdss_get_sync_fence_fd(struct mdss_fence *fence)
  */
 const char *mdss_get_sync_fence_name(struct mdss_fence *fence)
 {
-	struct fence *input_fence = NULL;
+	struct dma_fence *input_fence = NULL;
 
 	if (!fence) {
 		pr_err("invalid parameters\n");
 		return NULL;
 	}
 
-	input_fence = (struct fence *) &fence->base;
+	input_fence = (struct dma_fence *) &fence->base;
 
 	if (input_fence->ops->get_driver_name != &mdss_fence_get_driver_name)
 		return input_fence->ops->get_driver_name(input_fence);

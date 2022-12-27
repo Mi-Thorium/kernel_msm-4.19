@@ -1,5 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2013-2018, 2020-2021, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -15,6 +24,7 @@
 #include <linux/kobject.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
+#include <linux/interrupt.h>
 
 #include "mdss_fb.h"
 #include "mdss_dsi.h"
@@ -29,38 +39,6 @@
 static uint32_t interval = STATUS_CHECK_INTERVAL_MS;
 static int32_t dsi_status_disable = DSI_STATUS_CHECK_INIT;
 struct dsi_status_data *pstatus_data;
-
-int mdss_dsi_check_panel_status(struct mdss_dsi_ctrl_pdata *ctrl, void *arg)
-{
-	struct mdss_mdp_ctl *ctl = NULL;
-	struct msm_fb_data_type *mfd = arg;
-	int ret = 0;
-
-	if (!mfd)
-		return -EINVAL;
-
-	ctl = mfd_to_ctl(mfd);
-
-	if (!ctl || !ctrl)
-		return -EINVAL;
-
-	mutex_lock(&ctl->offlock);
-	/*
-	 * if check_status method is not defined
-	 * then no need to fail this function,
-	 * instead return a positive value.
-	 */
-	if (ctrl->check_status) {
-		mutex_lock(&mfd->sd_lock);
-		ret = ctrl->check_status(ctrl);
-		mutex_unlock(&mfd->sd_lock);
-	}
-	else
-		ret = 1;
-	mutex_unlock(&ctl->offlock);
-
-	return ret;
-}
 
 /*
  * check_dsi_ctrl_status() - Reads MFD structure and
@@ -117,8 +95,10 @@ irqreturn_t hw_vsync_handler(int irq, void *data)
 	else
 		pr_err("Pstatus data is NULL\n");
 
-	if (!atomic_read(&ctrl_pdata->te_irq_ready))
+	if (!atomic_read(&ctrl_pdata->te_irq_ready)) {
+		complete_all(&ctrl_pdata->te_irq_comp);
 		atomic_inc(&ctrl_pdata->te_irq_ready);
+	}
 
 	return IRQ_HANDLED;
 }
@@ -129,7 +109,7 @@ irqreturn_t hw_vsync_handler(int irq, void *data)
 void disable_esd_thread(void)
 {
 	if (pstatus_data &&
-	    cancel_delayed_work(&pstatus_data->check_status))
+		cancel_delayed_work_sync(&pstatus_data->check_status))
 		pr_debug("esd thread killed\n");
 }
 
@@ -166,15 +146,18 @@ static int fb_event_callback(struct notifier_block *self,
 		return NOTIFY_DONE;
 
 	mfd = evdata->info->par;
-	ctrl_pdata = container_of(dev_get_platdata(&mfd->pdev->dev),
+	if (mfd->panel_info->type == SPI_PANEL) {
+		pinfo = mfd->panel_info;
+	} else {
+		ctrl_pdata = container_of(dev_get_platdata(&mfd->pdev->dev),
 				struct mdss_dsi_ctrl_pdata, panel_data);
-	if (!ctrl_pdata) {
-		pr_err("%s: DSI ctrl not available\n", __func__);
-		return NOTIFY_BAD;
+		if (!ctrl_pdata) {
+			pr_err("%s: DSI ctrl not available\n", __func__);
+			return NOTIFY_BAD;
+		}
+
+		pinfo = &ctrl_pdata->panel_data.panel_info;
 	}
-
-	pinfo = &ctrl_pdata->panel_data.panel_info;
-
 	if ((!(pinfo->esd_check_enabled) &&
 			dsi_status_disable) ||
 			(dsi_status_disable == DSI_STATUS_CHECK_DISABLE)) {
@@ -195,10 +178,12 @@ static int fb_event_callback(struct notifier_block *self,
 			schedule_delayed_work(&pdata->check_status,
 				msecs_to_jiffies(interval));
 			break;
-		case FB_BLANK_POWERDOWN:
-		case FB_BLANK_HSYNC_SUSPEND:
 		case FB_BLANK_VSYNC_SUSPEND:
 		case FB_BLANK_NORMAL:
+			pr_debug("%s : ESD thread running\n", __func__);
+			break;
+		case FB_BLANK_POWERDOWN:
+		case FB_BLANK_HSYNC_SUSPEND:
 			cancel_delayed_work(&pdata->check_status);
 			break;
 		default:
@@ -210,7 +195,7 @@ static int fb_event_callback(struct notifier_block *self,
 }
 
 static int param_dsi_status_disable(const char *val,
-		const struct kernel_param *kp)
+				    const struct kernel_param *kp)
 {
 	int ret = 0;
 	int int_val;

@@ -1,6 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014-2018, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  */
 
@@ -376,7 +384,7 @@ static int pp_hist_lut_get_config(char __iomem *base_addr, void *cfg_data,
 		return -EFAULT;
 	}
 	if (lut_data->len != ENHIST_LUT_ENTRIES) {
-		pr_err("invalid hist_lut len %d\n", lut_data->len);
+		pr_err("invalid hist_lut len %d", lut_data->len);
 		return -EINVAL;
 	}
 	sz = ENHIST_LUT_ENTRIES * sizeof(u32);
@@ -399,7 +407,7 @@ static int pp_hist_lut_get_config(char __iomem *base_addr, void *cfg_data,
 	}
 
 	if (ret) {
-		pr_err("Failed to read hist_lut table ret %d\n", ret);
+		pr_err("Failed to read hist_lut table ret %d", ret);
 		return ret;
 	}
 
@@ -484,7 +492,7 @@ static int pp_hist_lut_set_config(char __iomem *base_addr,
 		break;
 	}
 	if (ret) {
-		pr_err("hist_lut table not updated ret %d\n", ret);
+		pr_err("hist_lut table not updated ret %d", ret);
 		return ret;
 	}
 	for (i = 0; i < ENHIST_LUT_ENTRIES; i += 2) {
@@ -565,7 +573,7 @@ static int pp_dither_set_config(char __iomem *base_addr,
 		(dither_data->b_cb_depth >= DITHER_DEPTH_MAP_INDEX) ||
 		(dither_data->r_cr_depth >= DITHER_DEPTH_MAP_INDEX) ||
 		(dither_data->len > DITHER_MATRIX_INDEX)) {
-		pr_err("invalid data for dither, g_y_depth %d y_cb_depth %d r_cr_depth %d\n len %d\n",
+		pr_err("invalid data for dither, g_y_depth %d y_cb_depth %d r_cr_depth %d\n len %d",
 			dither_data->g_y_depth, dither_data->b_cb_depth,
 			dither_data->r_cr_depth, dither_data->len);
 		return -EINVAL;
@@ -839,7 +847,7 @@ static int pp_gamut_set_config(char __iomem *base_addr,
 		return -EINVAL;
 	}
 	if (!(gamut_cfg_data->flags & ~(MDP_PP_OPS_READ))) {
-		pr_debug("only read ops is set %d\n", gamut_cfg_data->flags);
+		pr_debug("only read ops is set %d", gamut_cfg_data->flags);
 		return 0;
 	}
 
@@ -857,7 +865,7 @@ static int pp_gamut_set_config(char __iomem *base_addr,
 
 	if (gamut_data->mode != mdp_gamut_fine_mode &&
 	    gamut_data->mode != mdp_gamut_coarse_mode) {
-		pr_err("invalid gamut mode %d\n", gamut_data->mode);
+		pr_err("invalid gamut mode %d", gamut_data->mode);
 		return -EINVAL;
 	}
 	index_start = (gamut_data->mode == mdp_gamut_fine_mode) ?
@@ -962,7 +970,7 @@ static int pp_pcc_set_config(char __iomem *base_addr,
 		return -EINVAL;
 	}
 	if (!(pcc_cfg_data->ops & ~(MDP_PP_OPS_READ))) {
-		pr_info("only read ops is set %d\n", pcc_cfg_data->ops);
+		pr_info("only read ops is set %d", pcc_cfg_data->ops);
 		return 0;
 	}
 	pcc_data = pcc_cfg_data->cfg_payload;
@@ -1300,11 +1308,11 @@ static int pp_pa_set_config(char __iomem *base_addr,
 		return -EINVAL;
 	}
 	if (!(pa_cfg_data->flags & ~(MDP_PP_OPS_READ))) {
-		pr_info("only read ops is set %d\n", pa_cfg_data->flags);
+		pr_info("only read ops is set %d", pa_cfg_data->flags);
 		return 0;
 	}
 	if (pa_cfg_data->flags & MDP_PP_OPS_DISABLE) {
-		pr_debug("Disable PA\n");
+		pr_debug("Disable PA");
 		goto pa_set_sts;
 	}
 
@@ -1710,7 +1718,7 @@ static int pp_igc_set_config(char __iomem *base_addr,
 		return ret;
 	}
 	if (lut_cfg_data->block > IGC_MASK_MAX) {
-		pr_err("invalid mask value for IGC %d\n", lut_cfg_data->block);
+		pr_err("invalid mask value for IGC %d", lut_cfg_data->block);
 		return -EINVAL;
 	}
 	if (!(lut_cfg_data->ops & MDP_PP_OPS_WRITE)) {
@@ -1845,11 +1853,11 @@ static int pp_igc_get_config(char __iomem *base_addr, void *cfg_data,
 		c2_data[i] = readl_relaxed(c2) & IGC_DATA_MASK;
 	}
 	if (copy_to_user(lut_data->c0_c1_data, c0c1_data, sz)) {
-		pr_err("failed to copy the c0c1 data\n");
+		pr_err("failed to copy the c0c1 data");
 		ret = -EFAULT;
 	}
 	if (!ret && copy_to_user(lut_data->c2_data, c2_data, sz)) {
-		pr_err("failed to copy the c2 data\n");
+		pr_err("failed to copy the c2 data");
 		ret = -EFAULT;
 	}
 	kfree(c0c1_data);
@@ -1884,7 +1892,7 @@ static int pp_pgc_set_config(char __iomem *base_addr,
 		return -EINVAL;
 	}
 	if (!(pgc_data->flags & ~(MDP_PP_OPS_READ))) {
-		pr_debug("only read ops is set %d\n", pgc_data->flags);
+		pr_debug("only read ops is set %d", pgc_data->flags);
 		return 0;
 	}
 	if (pgc_data->flags & MDP_PP_OPS_DISABLE) {
@@ -1973,7 +1981,7 @@ static int pp_pgc_get_config(char __iomem *base_addr, void *cfg_data,
 		return -EFAULT;
 	}
 	if (!(pgc_data->flags & MDP_PP_OPS_READ)) {
-		pr_info("read ops is not set %d\n", pgc_data->flags);
+		pr_info("read ops is not set %d", pgc_data->flags);
 		return -EINVAL;
 	}
 	sz = PGC_LUT_ENTRIES * sizeof(u32);

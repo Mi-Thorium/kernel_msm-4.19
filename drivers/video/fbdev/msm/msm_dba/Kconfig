@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0-only
 #
 # MSM DBA
 #
@@ -6,7 +5,7 @@
 config MSM_DBA
 	bool "MSM Display Bridge Abstraction support"
 	depends on ARM || ARM64
-	help
+	---help---
 	  Support for MSM display bridge abstraction interface. MSM display
 	  drivers can use the same interface to interact with different third
 	  party bridge chips. Drivers implemented for third party bridge chips
@@ -19,7 +18,7 @@ config MSM_DBA_ADV7533
 	bool "ADV7533 driver support through MSM DBA interface"
 	depends on MSM_DBA
 	default n
-	help
+	---help---
 	  Support for ADV7533 DSI to HDMI display bridge driver. The driver
 	  controls the ADV7533 HW through the I2C interface and configures
 	  the DSI input and HDMI output video format.

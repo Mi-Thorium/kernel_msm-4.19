@@ -1,5 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2013-2015, 2017-2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2013-2015, 2017-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
@@ -29,6 +39,7 @@ static int mdss_mdp_splash_alloc_memory(struct msm_fb_data_type *mfd,
 	struct msm_fb_splash_info *sinfo;
 	unsigned long buf_size = size;
 	struct mdss_data_type *mdata;
+	struct ion_handle *handle;
 
 	if (!mfd || !size)
 		return -EINVAL;
@@ -36,14 +47,22 @@ static int mdss_mdp_splash_alloc_memory(struct msm_fb_data_type *mfd,
 	mdata = mfd_to_mdata(mfd);
 	sinfo = &mfd->splash_info;
 
-	if (!mdata || sinfo->splash_buffer)
+	if (!mdata || !mdata->iclient || sinfo->splash_buffer)
 		return -EINVAL;
 
-	sinfo->dma_buf = ion_alloc(size, ION_HEAP(ION_SYSTEM_HEAP_ID), 0);
-	if (IS_ERR_OR_NULL(sinfo->dma_buf)) {
+	handle = ion_alloc(mdata->iclient, size, SZ_4K,
+				ION_HEAP(ION_SYSTEM_HEAP_ID), 0);
+	if (IS_ERR_OR_NULL(handle)) {
 		pr_err("ion memory allocation failed\n");
-		rc = PTR_RET(sinfo->dma_buf);
+		rc = PTR_RET(handle);
 		goto end;
+	}
+
+	sinfo->size = size;
+	sinfo->dma_buf = ion_share_dma_buf(mdata->iclient, handle);
+	if (IS_ERR(sinfo->dma_buf)) {
+		rc = PTR_ERR(sinfo->dma_buf);
+		goto imap_err;
 	}
 
 	sinfo->attachment = mdss_smmu_dma_buf_attach(sinfo->dma_buf,
@@ -77,7 +96,10 @@ static int mdss_mdp_splash_alloc_memory(struct msm_fb_data_type *mfd,
 		goto kmap_err;
 	}
 
-	dma_buf_put(sinfo->dma_buf);
+	/**
+	 * dma_buf has the reference
+	 */
+	ion_free(mdata->iclient, handle);
 
 	return rc;
 kmap_err:
@@ -90,6 +112,8 @@ err_detach:
 	dma_buf_detach(sinfo->dma_buf, sinfo->attachment);
 err_put:
 	dma_buf_put(sinfo->dma_buf);
+imap_err:
+	ion_free(mdata->iclient, handle);
 end:
 	return rc;
 }
@@ -105,11 +129,10 @@ static void mdss_mdp_splash_free_memory(struct msm_fb_data_type *mfd)
 	sinfo = &mfd->splash_info;
 	mdata = mfd_to_mdata(mfd);
 
-	if (!mdata || !sinfo->dma_buf)
+	if (!mdata || !mdata->iclient || !sinfo->dma_buf)
 		return;
 
-	dma_buf_end_cpu_access(sinfo->dma_buf,
-			       DMA_BIDIRECTIONAL);
+	dma_buf_end_cpu_access(sinfo->dma_buf, DMA_BIDIRECTIONAL);
 	dma_buf_kunmap(sinfo->dma_buf, 0, sinfo->splash_buffer);
 
 	mdss_smmu_unmap_dma_buf(sinfo->table, MDSS_IOMMU_DOMAIN_UNSECURE, 0,
@@ -149,8 +172,14 @@ static int mdss_mdp_splash_iommu_attach(struct msm_fb_data_type *mfd)
 	 */
 	mdata->handoff_pending = false;
 
+	ret = mdss_smmu_set_attribute(MDSS_IOMMU_DOMAIN_UNSECURE, EARLY_MAP, 1);
+	if (ret) {
+		pr_debug("mdss set attribute failed for early map\n");
+		goto end;
+	}
+
 	ret = mdss_iommu_ctrl(1);
-	if (IS_ERR_VALUE((unsigned long) ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_err("mdss iommu attach failed\n");
 		goto end;
 	}
@@ -168,9 +197,6 @@ static int mdss_mdp_splash_iommu_attach(struct msm_fb_data_type *mfd)
 	}
 
 	ret = mdss_smmu_set_attribute(MDSS_IOMMU_DOMAIN_UNSECURE, EARLY_MAP, 0);
-	if (ret)
-		pr_err("mdss reset attribute failed for early map\n");
-
 end:
 	mdata->handoff_pending = true;
 
@@ -228,7 +254,10 @@ int mdss_mdp_splash_cleanup(struct msm_fb_data_type *mfd,
 {
 	struct mdss_overlay_private *mdp5_data;
 	struct mdss_mdp_ctl *ctl;
+	static u32 splash_mem_addr;
+	static u32 splash_mem_size;
 	int rc = 0;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 
 	if (!mfd)
 		return -EINVAL;
@@ -270,7 +299,7 @@ int mdss_mdp_splash_cleanup(struct msm_fb_data_type *mfd,
 		 */
 		if (mdp5_data->handoff && ctl && ctl->is_video_mode) {
 			rc = mdss_mdp_display_commit(ctl, NULL, NULL);
-			if (!IS_ERR_VALUE((unsigned long) rc)) {
+			if (!IS_ERR_VALUE((unsigned long)rc)) {
 				mdss_mdp_display_wait4comp(ctl);
 			} else {
 				/*
@@ -294,8 +323,39 @@ int mdss_mdp_splash_cleanup(struct msm_fb_data_type *mfd,
 
 	mdss_mdp_ctl_splash_finish(ctl, mdp5_data->handoff);
 
+	/* If DSI-1 interface is enabled by LK & split dsi is not enabled,
+	 * free cont_splash_mem for dsi during the cleanup for DSI-1.
+	 */
+	if (!mdata->splash_split_disp &&
+		(mdata->splash_intf_sel & MDSS_MDP_INTF_DSI1_SEL) &&
+		mfd->panel_info->pdest == DISPLAY_1) {
+		pr_debug("delay cleanup for display %d\n",
+						mfd->panel_info->pdest);
+		splash_mem_addr = mdp5_data->splash_mem_addr;
+		splash_mem_size = mdp5_data->splash_mem_size;
+
+		mdss_mdp_footswitch_ctrl_splash(0);
+		goto end;
+	}
+
+	if (!mdata->splash_split_disp &&
+		(mdata->splash_intf_sel & MDSS_MDP_INTF_DSI1_SEL) &&
+		mfd->panel_info->pdest == DISPLAY_2 &&
+		!mfd->splash_info.iommu_dynamic_attached) {
+		pr_debug("free splash mem for display %d\n",
+						mfd->panel_info->pdest);
+		/* Give back the reserved memory to the system */
+		memblock_free(splash_mem_addr, splash_mem_size);
+		mdss_free_bootmem(splash_mem_addr, splash_mem_size);
+
+		mdss_mdp_footswitch_ctrl_splash(0);
+		goto end;
+	}
+
 	if (mdp5_data->splash_mem_addr &&
 		!mfd->splash_info.iommu_dynamic_attached) {
+		pr_debug("free splash mem for display %d\n",
+						mfd->panel_info->pdest);
 		/* Give back the reserved memory to the system */
 		memblock_free(mdp5_data->splash_mem_addr,
 					mdp5_data->splash_mem_size);

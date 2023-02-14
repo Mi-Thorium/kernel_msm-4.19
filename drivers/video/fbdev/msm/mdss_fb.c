@@ -1861,6 +1861,7 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 {
 	int ret = 0;
 	int cur_power_state, current_bl;
+	struct mdss_data_type *mdata;
 
 	if (!mfd)
 		return -EINVAL;
@@ -1872,6 +1873,20 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 
 	pr_debug("Transitioning from %d --> %d\n", cur_power_state,
 		req_power_state);
+
+	mdata = mfd_to_mdata(mfd);
+
+	if (!mdata) {
+		pr_err("mdata is NULL or not initialized\n");
+		return 0;
+	}
+
+	pr_info("%s: mdss version = 0x%x \n", __func__, mdata->mdp_rev);
+	if (mdata->mdp_rev == MDSS_MDP_HW_REV_114) {
+		pr_info("%s: mdss version = 0x%x MSM8937: MDSS_MDP_HW_REV_114=%x\n", __func__, mdata->mdp_rev, MDSS_MDP_HW_REV_114);
+		pr_err("WA Fix: Disable Suspend for Display\n");
+		return 0;
+	}
 
 	if (cur_power_state == req_power_state) {
 		pr_debug("No change in power state\n");

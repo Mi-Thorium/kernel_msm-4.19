@@ -4518,6 +4518,9 @@ static int gcc_sdm429w_probe(struct platform_device *pdev)
 		return PTR_ERR(vdd_cx.regulator[0]);
 	}
 
+	if (qm215 || msm8917)
+		vdd_cx.num_levels = VDD_SUPER_TUR;
+
 	regmap = qcom_cc_map(pdev, &gcc_sdm429w_desc);
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);

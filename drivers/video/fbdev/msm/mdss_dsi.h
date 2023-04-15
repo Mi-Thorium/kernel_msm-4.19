@@ -588,6 +588,23 @@ struct mdss_dsi_ctrl_pdata {
 	bool update_phy_timing; /* flag to recalculate PHY timings */
 
 	bool phy_power_off;
+
+#if IS_ENABLED(CONFIG_MACH_FAMILY_XIAOMI_ULYSSE)
+	int xiaomi_ulysse_ID0_status;
+	int xiaomi_ulysse_ID1_status;
+	int xiaomi_ulysse_lcmio_en_gpio;
+	int xiaomi_ulysse_lcm_vci_en_gpio;
+	int xiaomi_ulysse_ocp2131_enp_gpio;
+	int xiaomi_ulysse_ocp2131_enn_gpio;
+
+	int xiaomi_ulysse_board_id0_gpio; // 20
+	int xiaomi_ulysse_board_id1_gpio; // 21
+	int xiaomi_ulysse_ID0_status_gpio; // 59
+	int xiaomi_ulysse_ID1_status_gpio; // 66
+#endif
+#if IS_ENABLED(CONFIG_MACH_FAMILY_XIAOMI_WINGTECH)
+	bool wingtech_is_Lcm_Present;
+#endif
 };
 
 struct dsi_status_data {

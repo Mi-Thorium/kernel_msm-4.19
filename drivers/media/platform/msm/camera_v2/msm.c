@@ -1473,8 +1473,12 @@ static struct platform_driver msm_driver = {
 	},
 };
 
+extern bool msmb_camera_enable;
+
 static int __init msm_init(void)
 {
+	if (!msmb_camera_enable)
+		return -ENODEV;
 	return platform_driver_register(&msm_driver);
 }
 

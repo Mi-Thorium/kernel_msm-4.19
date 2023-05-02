@@ -3,6 +3,9 @@
  * Copyright (c) 2013-2015, 2018-2019, 2021, The Linux Foundation. All rights reserved.
  */
 
+#if IS_ENABLED(CONFIG_PARSE_ANDROIDBOOT_MODE)
+#include <linux/androidboot_mode.h>
+#endif
 #include <linux/module.h>
 #include <linux/regmap.h>
 #include <linux/init.h>
@@ -17,6 +20,9 @@
 #include <linux/leds.h>
 #include <linux/device.h>
 #include <linux/pwm.h>
+#if IS_ENABLED(CONFIG_MACH_XIAOMI_MSM8937)
+#include <xiaomi-msm8937/mach.h>
+#endif
 
 #define QPNP_VIB_VTG_CTL(base)		((base) + 0x41)
 #define QPNP_VIB_EN_CTL(base)		((base) + 0x46)
@@ -423,6 +429,11 @@ static int qpnp_vibrator_probe(struct platform_device *pdev)
 	struct qpnp_vib *vib;
 	int rc;
 	int i;
+
+#if IS_ENABLED(CONFIG_PARSE_ANDROIDBOOT_MODE) && IS_ENABLED(CONFIG_MACH_XIAOMI_MSM8937)
+	if (xiaomi_msm8937_mach_get() && androidboot_mode_get() != ANDROIDBOOT_MODE_RECOVERY)
+		return -ENODEV;
+#endif
 
 	vib = devm_kzalloc(&pdev->dev, sizeof(*vib), GFP_KERNEL);
 	if (!vib)

@@ -69,6 +69,8 @@ struct kgsl_mmu_ops {
 	bool (*mmu_pt_equal)(struct kgsl_mmu *mmu,
 			struct kgsl_pagetable *pt, u64 ttbr0);
 	int (*mmu_set_pf_policy)(struct kgsl_mmu *mmu, unsigned long pf_policy);
+	struct kgsl_protected_registers *(*mmu_get_prot_regs)
+			(struct kgsl_mmu *mmu);
 	int (*mmu_init_pt)(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt);
 	void (*mmu_add_global)(struct kgsl_mmu *mmu,
 			struct kgsl_memdesc *memdesc, const char *name);
@@ -333,6 +335,15 @@ static inline void kgsl_mmu_clear_fsr(struct kgsl_mmu *mmu)
 {
 	if (MMU_OP_VALID(mmu, mmu_clear_fsr))
 		return mmu->mmu_ops->mmu_clear_fsr(mmu);
+}
+
+static inline struct kgsl_protected_registers *kgsl_mmu_get_prot_regs
+						(struct kgsl_mmu *mmu)
+{
+	if (MMU_OP_VALID(mmu, mmu_get_prot_regs))
+		return mmu->mmu_ops->mmu_get_prot_regs(mmu);
+
+	return NULL;
 }
 
 static inline int kgsl_mmu_is_perprocess(struct kgsl_mmu *mmu)

@@ -57,6 +57,8 @@ struct aw2013_led {
 	struct aw2013 *chip;
 	struct led_classdev cdev;
 	u32 num;
+	u64 on_ms;
+	u64 off_ms;
 	unsigned int imax;
 };
 
@@ -66,8 +68,10 @@ struct aw2013 {
 	struct i2c_client *client;
 	struct aw2013_led leds[AW2013_MAX_LEDS];
 	struct regmap *regmap;
+	struct work_struct blink_work;
 	int num_leds;
 	bool enabled;
+	bool blinking;
 };
 
 static int aw2013_chip_init(struct aw2013 *chip)
@@ -192,77 +196,149 @@ error:
 	return ret;
 }
 
+static void aw2013_blink_work(struct work_struct *work)
+{
+	struct aw2013 *chip =
+		container_of(work, struct aw2013, blink_work);
+	struct i2c_client *client = chip->client;
+	struct device *dev = &client->dev;
+	struct aw2013_led *led = container_of(
+		dev_get_drvdata(dev), struct aw2013_led, cdev);
+	int ret, num = led->num;
+	unsigned long off = 0, on = 0;
+
+	if (!led->off_ms && !led->on_ms) {
+		led->off_ms = led->cdev.blink_delay_off;
+		led->on_ms = led->cdev.blink_delay_on;
+	}
+
+	mutex_lock(&chip->mutex);
+
+	/* Convert into values the HW will understand. */
+	off = min(5, ilog2((led->off_ms - 1) / AW2013_TIME_STEP) + 1);
+	on = min(7, ilog2((led->on_ms - 1) / AW2013_TIME_STEP) + 1);
+
+	led->cdev.blink_delay_off = BIT(off) * AW2013_TIME_STEP;
+	led->cdev.blink_delay_on = BIT(on) * AW2013_TIME_STEP;
+
+	/* Set timings */
+	ret = regmap_write(chip->regmap,
+			   AW2013_LEDT0(num), AW2013_LEDT0_T2(on));
+	if (ret) {
+		mutex_unlock(&chip->mutex);
+		return;
+	}
+	ret = regmap_write(chip->regmap,
+			   AW2013_LEDT1(num), AW2013_LEDT1_T4(off));
+	if (ret) {
+		mutex_unlock(&chip->mutex);
+		return;
+	}
+
+	/* Finally, enable the LED */
+	ret = regmap_update_bits(chip->regmap, AW2013_LCFG(num),
+				 AW2013_LCFG_MD, 0xFF);
+	if (ret) {
+		mutex_unlock(&chip->mutex);
+		return;
+	}
+
+	ret = regmap_update_bits(chip->regmap, AW2013_LCTR,
+				 AW2013_LCTR_LE(num), 0xFF);
+
+	mutex_unlock(&chip->mutex);
+}
+
 static int aw2013_blink_set(struct led_classdev *cdev,
 			    unsigned long *delay_on, unsigned long *delay_off)
 {
 	struct aw2013_led *led = container_of(cdev, struct aw2013_led, cdev);
-	int ret, num = led->num;
-	unsigned long off = 0, on = 0;
-
-	/* If no blink specified, default to 1 Hz. */
-	if (!*delay_off && !*delay_on) {
-		*delay_off = 500;
-		*delay_on = 500;
-	}
+	int ret;
 
 	if (!led->cdev.brightness) {
 		led->cdev.brightness = LED_FULL;
 		ret = aw2013_brightness_set(&led->cdev, led->cdev.brightness);
 		if (ret)
-			return ret;
+			goto out;
 	}
 
 	/* Never on - just set to off */
 	if (!*delay_on) {
+		led->chip->blinking = false;
 		led->cdev.brightness = LED_OFF;
 		return aw2013_brightness_set(&led->cdev, LED_OFF);
 	}
 
-	mutex_lock(&led->chip->mutex);
-
 	/* Never off - brightness is already set, disable blinking */
 	if (!*delay_off) {
-		ret = regmap_update_bits(led->chip->regmap, AW2013_LCFG(num),
-					 AW2013_LCFG_MD, 0);
+		mutex_lock(&led->chip->mutex);
+		ret = regmap_update_bits(led->chip->regmap, 
+					 AW2013_LCFG(led->num), AW2013_LCFG_MD, 0);
+		mutex_unlock(&led->chip->mutex);
+		led->chip->blinking = false;
 		goto out;
 	}
 
-	/* Convert into values the HW will understand. */
-	off = min(5, ilog2((*delay_off - 1) / AW2013_TIME_STEP) + 1);
-	on = min(7, ilog2((*delay_on - 1) / AW2013_TIME_STEP) + 1);
+	led->off_ms = *delay_off;
+	led->on_ms = *delay_on;
+	led->chip->blinking = true;
 
-	*delay_off = BIT(off) * AW2013_TIME_STEP;
-	*delay_on = BIT(on) * AW2013_TIME_STEP;
-
-	/* Set timings */
-	ret = regmap_write(led->chip->regmap,
-			   AW2013_LEDT0(num), AW2013_LEDT0_T2(on));
-	if (ret)
-		goto out;
-	ret = regmap_write(led->chip->regmap,
-			   AW2013_LEDT1(num), AW2013_LEDT1_T4(off));
-	if (ret)
-		goto out;
-
-	/* Finally, enable the LED */
-	ret = regmap_update_bits(led->chip->regmap, AW2013_LCFG(num),
-				 AW2013_LCFG_MD, 0xFF);
-	if (ret)
-		goto out;
-
-	ret = regmap_update_bits(led->chip->regmap, AW2013_LCTR,
-				 AW2013_LCTR_LE(num), 0xFF);
+	schedule_work(&led->chip->blink_work);
 
 out:
-	mutex_unlock(&led->chip->mutex);
-
 	return ret;
 }
+
+static ssize_t aw2013_breath_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct aw2013_led *led = container_of(led_cdev, struct aw2013_led,
+								cdev);
+
+	return led->chip->blinking;
+}
+
+static ssize_t aw2013_breath_store(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t len)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct aw2013_led *led =
+		container_of(led_cdev, struct aw2013_led, cdev);
+	bool blinking;
+	ssize_t ret = -EINVAL;
+
+	ret = kstrtobool(buf, &blinking);
+	if (ret < 0)
+		return ret;
+
+	led->chip->blinking = blinking;
+	led->cdev.brightness = led->chip->blinking ? LED_FULL : LED_OFF;
+	ret = aw2013_brightness_set(&led->cdev, led->cdev.brightness);
+	if (ret)
+		return ret;
+
+	schedule_work(&led->chip->blink_work);
+
+	return len;
+}
+
+static DEVICE_ATTR(breath, 0644, aw2013_breath_show, aw2013_breath_store);
+
+static struct attribute *aw2013_led_attributes[] = {
+	&dev_attr_breath.attr,
+	NULL,
+};
+
+static const struct attribute_group aw2013_led_attr_group = {
+	.attrs = aw2013_led_attributes
+};
 
 static int aw2013_probe_dt(struct aw2013 *chip)
 {
 	struct device_node *np = dev_of_node(&chip->client->dev), *child;
-	int count, ret = 0, i = 0;
+	int count, ret = 0, i = 0, j = 0;
 	struct aw2013_led *led;
 
 	count = of_get_available_child_count(np);
@@ -295,16 +371,27 @@ static int aw2013_probe_dt(struct aw2013 *chip)
 				 "DT property led-max-microamp is missing\n");
 		}
 
+		INIT_WORK(&chip->blink_work, aw2013_blink_work);
+
 		led->cdev.name =
 			of_get_property(child, "label", NULL) ? : child->name;
 		led->cdev.brightness_set_blocking = aw2013_brightness_set;
 		led->cdev.blink_set = aw2013_blink_set;
+		led->cdev.blink_delay_off = 500;
+		led->cdev.blink_delay_on = 500;
 
 		ret = devm_led_classdev_register(&chip->client->dev,
 						     &led->cdev);
 		if (ret < 0) {
 			of_node_put(child);
-			return ret;
+			goto err_out;
+		}
+
+		ret = sysfs_create_group(&led->cdev.dev->kobj,
+					&aw2013_led_attr_group);
+		if (ret) {
+			dev_err(&chip->client->dev, "led sysfs ret: %d\n", ret);
+			goto err_out;
 		}
 
 		i++;
@@ -316,6 +403,13 @@ static int aw2013_probe_dt(struct aw2013 *chip)
 	chip->num_leds = i;
 
 	return 0;
+
+err_out:
+	for (j = 0; j < chip->num_leds; j++)
+		sysfs_remove_group(&chip->leds[j].cdev.dev->kobj,
+				   &aw2013_led_attr_group);
+	cancel_work_sync(&chip->blink_work);
+	return ret;
 }
 
 static const struct regmap_config aw2013_regmap_config = {
@@ -404,6 +498,12 @@ error:
 static int aw2013_remove(struct i2c_client *client)
 {
 	struct aw2013 *chip = i2c_get_clientdata(client);
+	int i, parsed_leds = chip->num_leds;
+
+	for (i = 0; i < parsed_leds; i++)
+		sysfs_remove_group(&chip->leds[i].cdev.dev->kobj,
+				   &aw2013_led_attr_group);
+	cancel_work_sync(&chip->blink_work);
 
 	aw2013_chip_disable(chip);
 

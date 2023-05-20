@@ -403,6 +403,9 @@ struct arm_smmu_domain {
 	struct iommu_domain		domain;
 };
 
+static DEFINE_SPINLOCK(arm_smmu_devices_lock);
+static LIST_HEAD(arm_smmu_devices);
+
 struct arm_smmu_option_prop {
 	u32 opt;
 	const char *prop;
@@ -2430,6 +2433,22 @@ static int arm_smmu_init_asid(struct iommu_domain *domain,
 	return 0;
 }
 
+static struct arm_smmu_device *arm_smmu_get_by_list(struct device_node *np)
+{
+	struct arm_smmu_device *smmu;
+	unsigned long flags;
+
+	spin_lock_irqsave(&arm_smmu_devices_lock, flags);
+	list_for_each_entry(smmu, &arm_smmu_devices, list) {
+		if (smmu->dev->of_node == np) {
+			spin_unlock_irqrestore(&arm_smmu_devices_lock, flags);
+			return smmu;
+		}
+	}
+	spin_unlock_irqrestore(&arm_smmu_devices_lock, flags);
+	return NULL;
+}
+
 static void arm_smmu_free_asid(struct iommu_domain *domain)
 {
 	struct arm_smmu_domain *smmu_domain = to_smmu_domain(domain);
@@ -2447,7 +2466,8 @@ static void arm_smmu_free_asid(struct iommu_domain *domain)
 
 static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 					struct arm_smmu_device *smmu,
-					struct device *dev)
+					struct device *dev,
+					bool try_64bit_fmt)
 {
 	int irq, start, ret = 0;
 	unsigned long ias, oas;
@@ -2527,7 +2547,8 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 	if ((IS_ENABLED(CONFIG_64BIT) || cfg->fmt == ARM_SMMU_CTX_FMT_NONE) &&
 	    (smmu->features & (ARM_SMMU_FEAT_FMT_AARCH64_64K |
 			       ARM_SMMU_FEAT_FMT_AARCH64_16K |
-			       ARM_SMMU_FEAT_FMT_AARCH64_4K)))
+			       ARM_SMMU_FEAT_FMT_AARCH64_4K)) &&
+			       try_64bit_fmt)
 		cfg->fmt = ARM_SMMU_CTX_FMT_AARCH64;
 
 	if (cfg->fmt == ARM_SMMU_CTX_FMT_NONE) {
@@ -2643,6 +2664,20 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 	}
 
 	smmu_domain->smmu = smmu;
+	if (!dynamic) {
+		ret = arm_smmu_set_pt_format(smmu_domain,
+				     &smmu_domain->pgtbl_cfg);
+		if (cfg->fmt == ARM_SMMU_CTX_FMT_AARCH64)
+			dev_info(smmu->dev, "AARCH64 is%s supported for %s\n", ret ? " not" : "", dev_name(dev));
+		if (ret) {
+			ret = arm_smmu_restore_sec_cfg(smmu, cfg->cbndx);
+			if (!ret)
+				/* Restore succeeded, we can try again with AARCH32 */
+				ret = -EAGAIN;
+			smmu_domain->smmu = NULL;
+			goto out_unlock;
+		}
+	}
 	smmu_domain->dev = dev;
 	pgtbl_ops = alloc_io_pgtable_ops(fmt, &smmu_domain->pgtbl_cfg,
 					smmu_domain);
@@ -2677,14 +2712,6 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 					    smmu_domain->attributes);
 
 		arm_smmu_arch_init_context_bank(smmu_domain, dev);
-
-		/* for slave side secure, we may have to force the pagetable
-		 * format to V8L.
-		 */
-		ret = arm_smmu_set_pt_format(smmu_domain,
-					     &smmu_domain->pgtbl_cfg);
-		if (ret)
-			goto out_clear_smmu;
 
 		if (smmu->version < ARM_SMMU_V2) {
 			cfg->irptndx = atomic_inc_return(&smmu->irptndx);
@@ -3519,9 +3546,15 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		return ret;
 
 	/* Ensure that the domain is finalised */
-	ret = arm_smmu_init_domain_context(domain, smmu, dev);
-	if (ret < 0)
-		goto out_power_off;
+	ret = arm_smmu_init_domain_context(domain, smmu, dev, true);
+	if (ret < 0) {
+		if (ret != -EAGAIN)
+			goto out_power_off;
+
+		ret = arm_smmu_init_domain_context(domain, smmu, dev, false);
+		if (ret < 0)
+			goto out_power_off;
+	}
 
 	/* Do not modify the SIDs, HW is still running */
 	if (is_dynamic_domain(domain)) {
@@ -3873,7 +3906,7 @@ struct arm_smmu_device *arm_smmu_get_by_fwnode(struct fwnode_handle *fwnode)
 	struct device *dev = driver_find_device(&arm_smmu_driver.driver, NULL,
 						fwnode, arm_smmu_match_node);
 	put_device(dev);
-	return dev ? dev_get_drvdata(dev) : NULL;
+	return dev ? dev_get_drvdata(dev) : arm_smmu_get_by_list(to_of_node(fwnode));
 }
 
 #ifdef CONFIG_MSM_TZ_SMMU
@@ -3954,6 +3987,9 @@ bool arm_smmu_skip_write(void __iomem *addr)
 	/* Skip write if smmu not available by now */
 	if (!smmu)
 		return true;
+
+	if (!arm_smmu_is_static_cb(smmu))
+		return false;
 
 	/* Do not write to global space */
 	if (((unsigned long)addr & (smmu->size - 1)) < (smmu->size >> 1))
@@ -5783,6 +5819,11 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 		goto out_exit_power_resources;
 
 	smmu->sec_id = msm_dev_to_device_id(dev);
+	INIT_LIST_HEAD(&smmu->list);
+	spin_lock(&arm_smmu_devices_lock);
+	list_add(&smmu->list, &arm_smmu_devices);
+	spin_unlock(&arm_smmu_devices_lock);
+
 	err = arm_smmu_device_cfg_probe(smmu);
 	if (err)
 		goto out_power_off;
@@ -5855,6 +5896,9 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 
 out_power_off:
 	arm_smmu_power_off(smmu->pwr);
+	spin_lock(&arm_smmu_devices_lock);
+	list_del(&smmu->list);
+	spin_unlock(&arm_smmu_devices_lock);
 
 out_exit_power_resources:
 	arm_smmu_exit_power_resources(smmu->pwr);
@@ -5900,6 +5944,10 @@ static int arm_smmu_device_remove(struct platform_device *pdev)
 	arm_smmu_power_off(smmu->pwr);
 
 	arm_smmu_exit_power_resources(smmu->pwr);
+
+	spin_lock(&arm_smmu_devices_lock);
+	list_del(&smmu->list);
+	spin_unlock(&arm_smmu_devices_lock);
 
 	return 0;
 }

@@ -217,6 +217,7 @@ struct rc_dev {
 	struct list_head		lirc_fh;
 #endif
 	bool				registered;
+	u32                             open_count; // Xiaomi
 	int				(*change_protocol)(struct rc_dev *dev, u64 *rc_proto);
 	int				(*open)(struct rc_dev *dev);
 	void				(*close)(struct rc_dev *dev);

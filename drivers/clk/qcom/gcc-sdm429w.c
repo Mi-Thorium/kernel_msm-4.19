@@ -446,6 +446,10 @@ static struct pll_vco gpll3_vco[] = {
 	{ 700000000, 1400000000, 0 },
 };
 
+static struct pll_vco gpll3_vco_msm8937[] = {
+	{ 525000000, 1066000000, 0 },
+};
+
 static struct clk_alpha_pll gpll3_out_main = {
 	.offset = 0x22000,
 	.flags = SUPPORTS_SLEW,
@@ -592,6 +596,18 @@ static const struct freq_tbl ftbl_blsp1_qup1_spi_apps_clk_src[] = {
 	F(16000000, P_GPLL0_OUT_MAIN, 10, 1, 5),
 	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(25000000, P_GPLL0_OUT_MAIN, 16, 1, 2),
+	F(50000000, P_GPLL0_OUT_MAIN, 16, 0, 0),
+	{ }
+};
+
+static const struct freq_tbl ftbl_blsp1_qup1_spi_apps_clk_src_msm8917[] = {
+	F(960000, P_BI_TCXO, 10, 1, 2),
+	F(4800000, P_BI_TCXO, 4, 0, 0),
+	F(9600000, P_BI_TCXO, 2, 0, 0),
+	F(16000000, P_GPLL0_OUT_MAIN, 10, 1, 5),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
+	F(25000000, P_GPLL0_OUT_MAIN, 16, 1, 2),
+	F(40000000, P_GPLL0_OUT_MAIN, 16, 1, 2),
 	F(50000000, P_GPLL0_OUT_MAIN, 16, 0, 0),
 	{ }
 };
@@ -1002,6 +1018,17 @@ static const struct freq_tbl ftbl_cpp_clk_src_qm215[] = {
 	F( 133330000, P_GPLL0_OUT_MAIN, 6, 0, 0),
 	F( 160000000, P_GPLL0_OUT_MAIN, 5, 0, 0),
 	F( 266670000, P_GPLL0_OUT_MAIN, 3, 0, 0),
+	F( 308570000, P_GPLL6_OUT_MAIN, 3.5, 0, 0),
+	F( 320000000, P_GPLL0_OUT_MAIN, 2.5, 0, 0),
+	F( 360000000, P_GPLL6_OUT_MAIN, 3, 0, 0),
+	{ }
+};
+
+static const struct freq_tbl ftbl_cpp_clk_src_msm8937[] = {
+	F( 133330000, P_GPLL0_OUT_MAIN, 6, 0, 0),
+	F( 160000000, P_GPLL0_OUT_MAIN, 5, 0, 0),
+	F( 200000000, P_GPLL0_OUT_MAIN, 5, 0, 0),
+	F( 266666667, P_GPLL0_OUT_MAIN, 3, 0, 0),
 	F( 308570000, P_GPLL6_OUT_MAIN, 3.5, 0, 0),
 	F( 320000000, P_GPLL0_OUT_MAIN, 2.5, 0, 0),
 	F( 360000000, P_GPLL6_OUT_MAIN, 3, 0, 0),
@@ -1749,6 +1776,89 @@ static struct freq_tbl ftbl_oxili_gfx3d_clk_src_qm215[] = {
 	F_SLEW( 523200000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1046400000),
 	F_SLEW( 550000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1100000000),
 	F_SLEW( 598000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1196000000),
+	{ }
+};
+
+static struct freq_tbl ftbl_oxili_gfx3d_clk_src_qm215_650MHz[] = {
+	F_SLEW( 19200000, P_BI_TCXO, 1, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 50000000, P_GPLL0_OUT_MAIN, 16, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 80000000, P_GPLL0_OUT_MAIN, 10, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 100000000, P_GPLL0_OUT_MAIN, 8, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 160000000, P_GPLL0_OUT_MAIN, 5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 200000000, P_GPLL0_OUT_MAIN, 4, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 228570000, P_GPLL0_OUT_MAIN, 3.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 240000000, P_GPLL6_OUT_AUX, 4.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 266670000, P_GPLL0_OUT_MAIN, 3, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 270000000, P_GPLL6_OUT_AUX, 4, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 320000000, P_GPLL0_OUT_MAIN, 2.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 400000000, P_GPLL0_OUT_MAIN, 2, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW( 465000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 930000000),
+	F_SLEW( 484800000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 969600000),
+	F_SLEW( 500000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1000000000),
+	F_SLEW( 523200000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1046400000),
+	F_SLEW( 550000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1100000000),
+	F_SLEW( 598000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1196000000),
+	F_SLEW( 650000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1300000000),
+	{ }
+};
+
+static const struct freq_tbl ftbl_oxili_gfx3d_clk_src_msm8937[] = {
+	F_SLEW(19200000, P_BI_TCXO, 1, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(50000000, P_GPLL0_OUT_MAIN, 16, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(80000000, P_GPLL0_OUT_MAIN, 10, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(160000000, P_GPLL0_OUT_MAIN, 5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(216000000, P_GPLL6_OUT_AUX, 5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(228570000, P_GPLL0_OUT_MAIN, 3.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(240000000, P_GPLL6_OUT_AUX, 4.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(266670000, P_GPLL0_OUT_MAIN, 3, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(300000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 600000000),
+	F_SLEW(320000000, P_GPLL0_OUT_MAIN, 2.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(375000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 750000000),
+	F_SLEW(400000000, P_GPLL0_OUT_MAIN, 2, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(450000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 900000000),
+	{ }
+};
+
+static const struct freq_tbl ftbl_oxili_gfx3d_clk_src_msm8937_475MHz[] = {
+	F_SLEW(19200000, P_BI_TCXO, 1, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(50000000, P_GPLL0_OUT_MAIN, 16, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(80000000, P_GPLL0_OUT_MAIN, 10, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(160000000, P_GPLL0_OUT_MAIN, 5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(216000000, P_GPLL6_OUT_AUX, 5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(228570000, P_GPLL0_OUT_MAIN, 3.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(240000000, P_GPLL6_OUT_AUX, 4.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(266670000, P_GPLL0_OUT_MAIN, 3, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(300000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 600000000),
+	F_SLEW(320000000, P_GPLL0_OUT_MAIN, 2.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(375000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 750000000),
+	F_SLEW(400000000, P_GPLL0_OUT_MAIN, 2, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(450000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 900000000),
+	F_SLEW(475000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 950000000),
+	{ }
+};
+
+static const struct freq_tbl ftbl_oxili_gfx3d_clk_src_msm8940_500MHz[] = {
+	F_SLEW(19200000, P_BI_TCXO, 1, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(50000000, P_GPLL0_OUT_MAIN, 16, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(80000000, P_GPLL0_OUT_MAIN, 10, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(160000000, P_GPLL0_OUT_MAIN, 5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(216000000, P_GPLL6_OUT_AUX, 5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(228570000, P_GPLL0_OUT_MAIN, 3.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(240000000, P_GPLL6_OUT_AUX, 4.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(266670000, P_GPLL0_OUT_MAIN, 3, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(300000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 600000000),
+	F_SLEW(320000000, P_GPLL0_OUT_MAIN, 2.5, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(375000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 750000000),
+	F_SLEW(400000000, P_GPLL0_OUT_MAIN, 2, 0, 0, FIXED_FREQ_SRC),
+	F_SLEW(450000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 900000000),
+	F_SLEW(475000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 950000000),
+	F_SLEW(500000000, P_GPLL3_OUT_MAIN_DIV, 1, 0, 0, 1000000000),
 	{ }
 };
 
@@ -3931,6 +4041,19 @@ static struct clk_branch gcc_qdss_dap_clk = {
 	},
 };
 
+static struct clk_branch gcc_ipa_tbu_clk = {
+	.halt_reg = 0x120A0,
+	.halt_check = BRANCH_VOTED,
+	.clkr = {
+		.enable_reg = 0x4500C,
+		.enable_mask = BIT(16),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_ipa_tbu_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
 static struct clk_dummy wcnss_m_clk = {
 	.rrate = 0,
 	.hw.init = &(struct clk_init_data){
@@ -4120,6 +4243,7 @@ static struct clk_regmap *gcc_sdm429w_clocks[] = {
 	[GCC_VFE_TBU_CLK] = &gcc_vfe_tbu_clk.clkr,
 	[GCC_VFE1_TBU_CLK] = &gcc_vfe1_tbu_clk.clkr,
 	[GCC_QDSS_DAP_CLK] = &gcc_qdss_dap_clk.clkr,
+	[GCC_IPA_TBU_CLK] = &gcc_ipa_tbu_clk.clkr,
 };
 
 static const struct qcom_reset_map gcc_sdm429w_resets[] = {
@@ -4224,9 +4348,9 @@ static void fixup_for_qm215(struct platform_device *pdev,
 	vcodec0_clk_src.clkr.hw.init = &vcodec0_clk_src_init;
 
 	gfx3d_clk_src.parent_map = gcc_parent_map_14_gfx3d;
-	gfx3d_clk_src.freq_tbl = ftbl_oxili_gfx3d_clk_src_qm215;
 
 	if (speed_bin) {
+		gfx3d_clk_src.freq_tbl = ftbl_oxili_gfx3d_clk_src_qm215_650MHz;
 		gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_LOW] =
 			270000000;
 		gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_LOW_L1] =
@@ -4238,6 +4362,7 @@ static void fixup_for_qm215(struct platform_device *pdev,
 		gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_HIGH] =
 			650000000;
 	} else {
+		gfx3d_clk_src.freq_tbl = ftbl_oxili_gfx3d_clk_src_qm215;
 		gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_LOW] =
 			270000000;
 		gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_LOW_L1] =
@@ -4286,6 +4411,87 @@ static void fixup_for_qm215(struct platform_device *pdev,
 	gcc_sdm429w_desc.clks[GCC_OXILI_TIMER_CLK] = NULL;
 	gcc_sdm429w_desc.clks[ESC1_CLK_SRC] = NULL;
 	gcc_sdm429w_desc.clks[GCC_MDSS_ESC1_CLK] = NULL;
+	gcc_sdm429w_desc.clks[GCC_IPA_TBU_CLK] = NULL;
+}
+
+static void fixup_for_msm8937(struct platform_device *pdev,
+	struct regmap *regmap, int speed_bin)
+{
+	gpll3_config.l = 0x30;
+	gpll3_config.alpha_hi = 0x70;
+
+	cpp_clk_src.freq_tbl = ftbl_cpp_clk_src_msm8937;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_LOW] = 160000000;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_LOW_L1] = 266670000;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_NOMINAL] = 320000000;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_NOMINAL_L1] = 342860000;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_HIGH] = 360000000;
+
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_LOW] = 216000000;
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_LOW_L1] = 300000000;
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_NOMINAL] = 375000000;
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_NOMINAL_L1] = 400000000;
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_HIGH] = 450000000;
+
+	if (speed_bin) {
+		gfx3d_clk_src.freq_tbl = ftbl_oxili_gfx3d_clk_src_msm8937_475MHz;
+		gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_SUPER_TUR] = 475000000;
+	} else {
+		gfx3d_clk_src.freq_tbl = ftbl_oxili_gfx3d_clk_src_msm8937;
+	}
+
+	gpll3_out_main.vco_table = gpll3_vco_msm8937;
+	gpll3_out_main.num_vco = ARRAY_SIZE(gpll3_vco_msm8937);
+	gpll3_out_main.clkr.hw.init->rate_max[VDD_LOW_L1] = 525000000;
+	gpll3_out_main.clkr.hw.init->rate_max[VDD_NOMINAL] = 1066000000;
+
+	/*
+	 * Below clocks are not available on MSM8937, thus mark them NULL.
+	 */
+	gcc_sdm429w_desc.clks[GCC_GFX_TCU_CLK] = NULL;
+	gcc_sdm429w_desc.clks[GCC_GFX_TBU_CLK] = NULL;
+	gcc_sdm429w_desc.clks[GCC_GTCU_AHB_CLK] = NULL;
+	gcc_sdm429w_desc.clks[GCC_IPA_TBU_CLK] = NULL;
+}
+
+static void fixup_for_msm8940(struct platform_device *pdev,
+	struct regmap *regmap, int speed_bin)
+{
+	gpll3_config.l = 0x30;
+	gpll3_config.alpha_hi = 0x70;
+
+	cpp_clk_src.freq_tbl = ftbl_cpp_clk_src_msm8937;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_LOW] = 160000000;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_LOW_L1] = 266670000;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_NOMINAL] = 320000000;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_NOMINAL_L1] = 342860000;
+	cpp_clk_src.clkr.hw.init->rate_max[VDD_HIGH] = 360000000;
+
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_LOW] = 216000000;
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_LOW_L1] = 300000000;
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_NOMINAL] = 375000000;
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_NOMINAL_L1] = 400000000;
+	gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_HIGH] = 450000000;
+
+	if (speed_bin) {
+		gfx3d_clk_src.freq_tbl = ftbl_oxili_gfx3d_clk_src_msm8940_500MHz;
+		gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_SUPER_TUR] = 500000000;
+	} else {
+		gfx3d_clk_src.freq_tbl = ftbl_oxili_gfx3d_clk_src_msm8937_475MHz;
+		gcc_oxili_gfx3d_clk.clkr.hw.init->rate_max[VDD_SUPER_TUR] = 475000000;
+	}
+
+	gpll3_out_main.vco_table = gpll3_vco_msm8937;
+	gpll3_out_main.num_vco = ARRAY_SIZE(gpll3_vco_msm8937);
+	gpll3_out_main.clkr.hw.init->rate_max[VDD_LOW_L1] = 525000000;
+	gpll3_out_main.clkr.hw.init->rate_max[VDD_NOMINAL] = 1066000000;
+
+	/*
+	 * Below clocks are not available on MSM8940, thus mark them NULL.
+	 */
+	gcc_sdm429w_desc.clks[GCC_GFX_TCU_CLK] = NULL;
+	gcc_sdm429w_desc.clks[GCC_GFX_TBU_CLK] = NULL;
+	gcc_sdm429w_desc.clks[GCC_GTCU_AHB_CLK] = NULL;
 }
 
 static void fixup_for_sdm439_429(void)
@@ -4296,11 +4502,15 @@ static void fixup_for_sdm439_429(void)
 	gcc_sdm429w_desc.clks[GCC_GFX_TCU_CLK] = NULL;
 	gcc_sdm429w_desc.clks[GCC_GFX_TBU_CLK] = NULL;
 	gcc_sdm429w_desc.clks[GCC_GTCU_AHB_CLK] = NULL;
+	gcc_sdm429w_desc.clks[GCC_IPA_TBU_CLK] = NULL;
 }
 static const struct of_device_id gcc_sdm429w_match_table[] = {
 	{ .compatible = "qcom,gcc-sdm429w" },
 	{ .compatible = "qcom,gcc-qm215" },
 	{ .compatible = "qcom,gcc-sdm439" },
+	{ .compatible = "qcom,gcc-msm8917" },
+	{ .compatible = "qcom,gcc-msm8937" },
+	{ .compatible = "qcom,gcc-msm8940" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, gcc_sdm429w_match_table);
@@ -4309,14 +4519,24 @@ static int gcc_sdm429w_probe(struct platform_device *pdev)
 {
 	struct regmap *regmap;
 	struct clk *clk;
-	int ret, speed_bin;
-	bool qm215, is_sdm439;
+	int ret, speed_bin = 0;
+	bool qm215, is_sdm439, msm8917, msm8937, msm8940;
+	u32 val;
 
 	qm215 = of_device_is_compatible(pdev->dev.of_node,
 						"qcom,gcc-qm215");
 
 	is_sdm439 = of_device_is_compatible(pdev->dev.of_node,
 						"qcom,gcc-sdm439");
+
+	msm8917 = of_device_is_compatible(pdev->dev.of_node,
+						"qcom,gcc-msm8917");
+
+	msm8937 = of_device_is_compatible(pdev->dev.of_node,
+						"qcom,gcc-msm8937");
+
+	msm8940 = of_device_is_compatible(pdev->dev.of_node,
+						"qcom,gcc-msm8940");
 
 	clk = clk_get(&pdev->dev, "bi_tcxo");
 	if (IS_ERR(clk)) {
@@ -4333,22 +4553,59 @@ static int gcc_sdm429w_probe(struct platform_device *pdev)
 		return PTR_ERR(vdd_cx.regulator[0]);
 	}
 
+	if (qm215 || msm8917)
+		vdd_cx.num_levels = VDD_SUPER_TUR;
+
 	regmap = qcom_cc_map(pdev, &gcc_sdm429w_desc);
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
 
-	if (qm215) {
-		speed_bin = 0;
-		get_speed_bin(pdev, &speed_bin);
-		fixup_for_qm215(pdev, regmap, speed_bin);
+	if (is_sdm439 || msm8937 || msm8940) {
+		/* Oxili Ocmem in GX rail: OXILI_GMEM_CLAMP_IO */
+		val = regmap_read(regmap, 0x5B00C, &val);
+		val &= ~BIT(0);
+		regmap_write(regmap, 0x5B00C, val);
+	}
 
+	if (qm215 || msm8917 || msm8937 || msm8940)
+		get_speed_bin(pdev, &speed_bin);
+
+	if (qm215 || msm8917) {
 		/* Configure Sleep and Wakeup cycles for GMEM clock */
 		regmap_update_bits(regmap, gcc_oxili_gmem_clk.clkr.enable_reg,
 				0xff0, 0xff0);
+	} else {
+		/* Configure Sleep and Wakeup cycles for OXILI clock */
+		regmap_update_bits(regmap, gcc_oxili_gfx3d_clk.clkr.enable_reg,
+				0xf0, 0xf0);
+	}
+
+	if (qm215 || msm8917) {
+		fixup_for_qm215(pdev, regmap, speed_bin);
+		if (msm8917) {
+			blsp1_qup2_spi_apps_clk_src.freq_tbl =
+				ftbl_blsp1_qup1_spi_apps_clk_src_msm8917;
+			blsp1_qup3_spi_apps_clk_src.freq_tbl =
+				ftbl_blsp1_qup1_spi_apps_clk_src_msm8917;
+			blsp1_qup4_spi_apps_clk_src.freq_tbl =
+				ftbl_blsp1_qup1_spi_apps_clk_src_msm8917;
+			blsp2_qup1_spi_apps_clk_src.freq_tbl =
+				ftbl_blsp1_qup1_spi_apps_clk_src_msm8917;
+			blsp2_qup2_spi_apps_clk_src.freq_tbl =
+				ftbl_blsp1_qup1_spi_apps_clk_src_msm8917;
+			blsp2_qup3_spi_apps_clk_src.freq_tbl =
+				ftbl_blsp1_qup1_spi_apps_clk_src_msm8917;
+		}
 	}
 
 	if (is_sdm439)
 		fixup_for_sdm439_429();
+
+	if (msm8937)
+		fixup_for_msm8937(pdev, regmap, speed_bin);
+
+	if (msm8940)
+		fixup_for_msm8940(pdev, regmap, speed_bin);
 
 	clk_alpha_pll_configure(&gpll3_out_main, regmap, &gpll3_config);
 

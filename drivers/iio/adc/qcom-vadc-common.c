@@ -51,7 +51,7 @@ static const struct vadc_map_pt adcmap_100k_104ef_104fb[] = {
 };
 
 #if IS_ENABLED(CONFIG_MACH_XIAOMI_ROLEX)
-static const struct qpnp_vadc_map_pt adcmap_100k_104ef_104fb_xiaomi_rolex[] = {
+static const struct vadc_map_pt adcmap_100k_104ef_104fb_xiaomi_rolex[] = {
 	{1707,	-30 },
 	{1701,	-29},
 	{1694,	-28},

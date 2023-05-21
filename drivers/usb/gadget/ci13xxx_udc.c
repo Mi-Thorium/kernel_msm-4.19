@@ -3653,10 +3653,10 @@ static int ci13xxx_pullup(struct usb_gadget *_gadget, int is_active)
 
 #if IS_ENABLED(CONFIG_MACH_XIAOMI_SDM439)
 	if (xiaomi_sdm439_mach_get()) {
-		info("%s,softconnec=%d,is_active=%d\n", __func__, udc->softconnect, is_active);
+		pr_info("%s,softconnec=%d,is_active=%d\n", __func__, udc->softconnect, is_active);
 
 		if (!udc->softconnect && is_active) {
-			info("%s %d\n", __func__, __LINE__);
+			pr_info("%s %d\n", __func__, __LINE__);
 			xiaomi_sdm439_ci13xxx_udc_connect(udc);
 			mdelay(100);
 		}

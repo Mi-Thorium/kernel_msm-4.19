@@ -1,0 +1,27 @@
+&mtp_batterydata {
+	#include "batterydata/Olive-SWD-5000mah-330kohm.dtsi"
+	#include "batterydata/Olive-GY-5000mah-100kohm.dtsi"
+	#include "batterydata/Olive-Default-5000mah-330kohm.dtsi"
+};
+
+&thermal_zones {
+	quiet-therm-step {
+		trips {
+			quiet_batt_439_trip1: quiet-batt-trip1 {
+				temperature = <37000>;
+			};
+			quiet_batt_439_trip2: quiet-batt-trip2 {
+				temperature = <38000>;
+			};
+			quiet_batt_439_trip3: quiet-batt-trip3 {
+				temperature = <40000>;
+			};
+			quiet_batt_439_trip4: quiet-batt-trip4 {
+				temperature = <43000>;
+			};
+			quiet_batt_439_trip5: quiet-batt-trip5 {
+				temperature = <48000>;
+			};
+		};
+	};
+};

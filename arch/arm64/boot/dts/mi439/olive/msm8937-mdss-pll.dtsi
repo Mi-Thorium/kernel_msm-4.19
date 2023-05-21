@@ -1,0 +1,9 @@
+&mdss_dsi0_pll {
+	qcom,dsi-pll-ssc-mode = "center-spread";
+	qcom,ssc-ppm = <2500>;
+};
+
+&mdss_dsi1_pll {
+	qcom,dsi-pll-ssc-mode = "center-spread";
+	qcom,ssc-ppm = <2500>;
+};

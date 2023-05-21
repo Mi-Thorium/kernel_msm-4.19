@@ -1,0 +1,27 @@
+&soc {
+	sn_fuse: snfuse@0xa4128 {
+		compatible = "qcom,sn-fuse";
+		reg = <0xa4128 0x4>,
+		      <0x00a0120 0x4>;
+		reg-names = "sn-base","cfi-base";
+	};
+};
+
+&reserved_memory {
+		ramoops {
+			compatible = "removed-dma-pool", "ramoops";
+			no-map;
+			reg = <0x0 0x9ff00000 0x0 0x00400000>;
+			console-size = <0x200000>;
+			pmsg-size = <0x200000>;
+			status = "ok";
+		};
+};
+
+&adsp_fw_mem {
+	reg = <0x0 0x8bd00000 0x0 0x1800000>;
+};
+
+&wcnss_fw_mem {
+	reg = <0x0 0x8d500000 0x0 0x700000>;
+};

@@ -1,0 +1,7 @@
+#include "dsi-panel-ft8006s-hdplus-video_c3i.dtsi"
+#include "dsi-panel-ili9881c-hdplus-video_c3e.dtsi"
+#include "dsi-panel-ili9881c-hdplus-video.dtsi"
+#include "dsi-panel-ili9881d-hdplus-video_c3e.dtsi"
+#include "dsi-panel-ili9881h-hdplus-video_c3i.dtsi"
+#include "dsi-panel-jd9365z-hdplus-video_c3e.dtsi"
+#include "dsi-panel-nvt36525b-hdplus-video_c3i.dtsi"

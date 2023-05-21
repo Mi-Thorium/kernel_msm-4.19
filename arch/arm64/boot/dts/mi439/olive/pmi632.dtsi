@@ -1,0 +1,31 @@
+&pmi632_charger {
+	qcom,flash-disable-soc = <5>;
+};
+
+&pmi632_qg {
+	qcom,qg-iterm-ma = <350>;
+};
+
+&pmi632_vib {
+	qcom,vib-ldo-volt-uv = <2800000>;
+};
+
+&lcdb_ldo_vreg { regulator-min-microvolt = <6000000>; };
+&lcdb_ncp_vreg { regulator-min-microvolt = <6000000>; };
+
+&pmi632_lcdb {
+	/delete-property/ qcom,ttw-enable;
+};
+
+&pmi632_flash0 {
+	qcom,max-current = <1200>;
+};
+
+&pmi632_flash1 {
+	qcom,max-current = <1200>;
+};
+
+&pmi632_torch0 {
+	qcom,max-current = <120>;
+	qcom,current-ma = <120>;
+};

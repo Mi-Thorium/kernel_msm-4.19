@@ -1,0 +1,61 @@
+/ {
+	mtp_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <10>;
+		/delete-node/ qcom,ascent_3450mah;
+		/delete-node/ qcom,mlp356477_2800mah;
+	};
+};
+
+&pmi632_qg {
+	qcom,battery-data = <&mtp_batterydata>;
+};
+
+&pmi632_charger {
+	qcom,battery-data = <&mtp_batterydata>;
+};
+
+&quiet_therm_default {
+		bias-disable;
+};
+
+&thermal_zones {
+	quiet-therm-step {
+		thermal-sensors = <&pmi632_tz>;
+		/delete-property/ wake-capable-sensor;
+
+		trips {
+			/delete-node/ quiet-bt-trp6-mdm-trp3;
+			/delete-node/ quiet-batt-trip7;
+			quiet_modem_439_trip1: quiet-modem-trip0 {
+				temperature = <59000>;
+			};
+			quiet_modem_439_trip2: quiet-modem-trip1 {
+				temperature = <61000>;
+			};
+			quiet_modem_439_trip3: quiet-modem-trip2 {
+				temperature = <63000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			quiet_modem_439_trip4: quiet-modem-trip3 {
+				temperature = <70000>;
+			};
+			quiet_batt_439_trip1: quiet-batt-trip1 {
+				hysteresis = <4000>;
+			};
+		};
+
+		cooling-maps {
+			/delete-node/ battery_lvl6;
+			/delete-node/ battery_lvl7;
+			modem_lvl2 {
+				trip = <&quiet_modem_439_trip3>;
+			};
+		};
+	};
+
+	quiet-therm-adc {
+		thermal-sensors = <&pmi632_tz>;
+		/delete-property/ wake-capable-sensor;
+	};
+};

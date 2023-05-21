@@ -1,0 +1,50 @@
+&firmware {
+	android {
+		vbmeta { 
+			parts = "vbmeta,boot,system,vendor,dtbo,recovery";
+		};
+
+		fstab {
+			vendor {
+				dev = "/dev/block/platform/soc/7824900.sdhci/by-name/vendor";
+				fsmgr_flags = "wait";
+			};
+		};
+	};
+};
+
+&other_ext_mem {
+	reg = <0x0 0x84a00000 0x0 0x1d00000>;
+};
+
+&soc {
+	qcom,msm_fastrpc { qcom,secure-domains = <0x03>; };
+	/delete-node/ qseecom@85b00000;
+	qcom_seecom: qseecom@84a00000 {
+		compatible = "qcom,qseecom";
+		reg = <0x84a00000 0x1900000>;
+		reg-names = "secapp-region";
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,support-fde;
+		qcom,commonlib64-loaded-by-uefi;
+		qcom,msm-bus,name = "qseecom-noc";
+		qcom,msm-bus,num-cases = <4>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,support-bus-scaling;
+		qcom,msm-bus,vectors-KBps =
+			<55 512 0 0>,
+			<55 512 0 0>,
+			<55 512 120000 1200000>,
+			<55 512 393600 3936000>;
+		clocks = <&gcc CRYPTO_CLK_SRC>,
+			<&gcc GCC_CRYPTO_CLK>,
+			<&gcc GCC_CRYPTO_AHB_CLK>,
+			<&gcc GCC_CRYPTO_AXI_CLK>;
+		clock-names = "core_clk_src", "core_clk",
+			"iface_clk", "bus_clk";
+		qcom,ce-opp-freq = <100000000>;
+	};
+};

@@ -1,0 +1,4 @@
+&pm8953_l19 {
+	regulator-min-microvolt = <1350000>;
+	regulator-max-microvolt = <1350000>;
+};

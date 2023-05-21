@@ -1,0 +1,46 @@
+&int_codec {
+	qcom,msm-hs-micbias-type = "internal";
+};
+
+&wsa881x_i2c_f {
+	status = "disabled";
+};
+
+&wsa881x_i2c_45 {
+	status = "disabled";
+};
+
+&gpio_keys {
+	camera_snapshot {
+		label = "camera_snapshot";
+		gpios = <&tlmm 127 0x1>;
+		linux,input-type = <1>;
+		linux,code = <0x2B1>;
+		debounce-interval = <15>;
+		linux,can-disable;
+		gpio-key,wakeup;
+	};
+};
+
+&soc {
+	gpio_ldo_power {
+		compatible = "fm,fm_lan_enable";
+	};
+};
+
+&mdss_dsi_active {
+	mux {
+		pins = "gpio60","gpio132","gpio133";
+	};
+	config {
+		pins = "gpio60","gpio132","gpio133";
+	};
+};
+&mdss_dsi_suspend {
+	mux {
+		pins = "gpio60","gpio132","gpio133";
+	};
+	config {
+		pins = "gpio60","gpio132","gpio133";
+	};
+};

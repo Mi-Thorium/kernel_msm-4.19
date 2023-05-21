@@ -1,0 +1,2 @@
+#include "msm8937-mdss-panels.dtsi"
+#include "sdm439-qrd.dtsi"

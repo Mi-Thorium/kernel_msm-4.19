@@ -1,0 +1,19 @@
+/ {
+	qcom,msm-id = <353 0x10008>;
+};
+
+&spi_6 {
+	status = "okay";
+	spi-max-frequency = <50000000>;
+	irled@0 {
+		compatible = "ir-spi";
+		reg = <0x0>;
+		vdd-supply = <&pm8953_l8>; //vdd
+		status = "ok";
+		spi-max-frequency = <19200000>;
+	};
+};
+
+&usb_otg {
+	qcom,hsusb-otg-phy-init-seq =  <0x43 0x80 0x37 0x81 0x76 0x82 0xffffffff>;
+};

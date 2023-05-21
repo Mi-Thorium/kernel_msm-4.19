@@ -1,0 +1,7 @@
+&int_codec {
+	/delete-property/ qcom,msm-micbias2-ext-cap;
+	/delete-property/ msm-vdd-wsa-switch-supply;
+	/delete-property/ qcom,msm-vdd-wsa-switch-voltage;
+	/delete-property/ qcom,msm-vdd-wsa-switch-current;
+	qcom,wsa-disabled;
+};

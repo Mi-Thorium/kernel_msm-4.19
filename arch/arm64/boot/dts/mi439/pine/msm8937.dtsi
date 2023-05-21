@@ -1,0 +1,16 @@
+/ {
+	aliases {
+		/delete-property/ spi6;
+	};
+};
+
+&soc {
+	/delete-node/ spi@7af6000;
+
+	qcom,wdt@b017000 {
+		qcom,bark-time = <15000>;
+	};
+	qcom,wcnss-wlan@0a000000 {
+		qcom,iris-vddrfa-voltage-level = <1450000 0 1450000>;
+	};
+};

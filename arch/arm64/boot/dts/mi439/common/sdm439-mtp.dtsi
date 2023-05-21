@@ -1,0 +1,72 @@
+// Xiaomeme inherits sdm439-mtp.dtsi in their msm8937.dtsi..
+//   #include "../../sdm439-mtp.dtsi"
+// We don't want that
+
+&i2c_5 {
+	lm3697@36 {
+		compatible = "ti,lm3697";
+		reg = <0x36>;
+		
+		enable-gpios = <&pm8953_gpios 4 0>;
+		
+		backlight {
+			compatible = "ti,lm3697-backlight";
+			
+			lcd {
+				led-sources = <0 1 2>;
+				ramp-up-msec = <200>;
+				ramp-down-msec = <200>;
+				/*pwm-period = <0>;*/
+				default-brightness-level = <255>;
+			};
+		};
+		
+		fault-monitor {
+			compatible = "ti,lm3697-fault-monitor";
+		};
+	};
+	
+	ktd@36 {
+		compatible = "ktd,ktd3137";
+		reg = <0x37>;
+		enable-gpios = <&pm8953_gpios 4 0>;
+		/*ktd,pwm-mode; */
+		ktd,using-lsb = <1>;
+		ktd,pwm-frequency = <100>;
+		ktd,bl-fscal-led = <0x98>;/*default 20.2mA*/
+		ktd,turn-on-ramp = <0>;
+		ktd,turn-off-ramp = <0>;
+		ktd,pwm-trans-dim = <0>;
+		ktd,i2c-trans-dim = <0>;
+		ktd,bl-channel = <2>;
+		ktd,ovp-level = <32>; /*default 32v*/
+		ktd,switching-frequency = <1000>; /*default 1000kHz*/
+		ktd,inductor-current = <2600>; //default 2600mA
+		ktd,linear_ramp = <1>; /*default is exponential*/
+		ktd,linear_backlight = <1>; /*default is exponential*/
+	};
+	
+	vituralsar@33{/*Add by HQ-102007757 for vituralsar*/
+		compatible = "virtualsar,sar";
+		reg = <0x33>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <126 0x02>;
+		vituralsar,irq-gpio = <&tlmm 126 0x2008>;
+	};
+};
+
+&pm8953_gpios {
+	bklt_en {
+		bklt_en_default: bklt_en_default {
+		pins = "gpio4";
+		function = "normal";
+		power-source = <0>;
+		output-high;
+		};
+	};
+};
+
+&mdss_dsi0 {
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active &bklt_en_default>;
+	/delete-property/ qcom,platform-bklight-en-gpio;
+};

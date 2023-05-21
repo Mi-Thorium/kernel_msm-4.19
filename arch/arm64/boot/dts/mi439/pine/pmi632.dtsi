@@ -1,0 +1,8 @@
+&pmi632_qg {
+	qcom,qg-iterm-ma = <280>;
+};
+
+&led_flash0 {
+	qcom,flash-source = <&pmi632_flash0>;
+	qcom,torch-source = <&pmi632_torch0>;
+};

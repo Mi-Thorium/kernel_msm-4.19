@@ -1,0 +1,3 @@
+#include "sdm439-camera-sensor-qrd-olive.dtsi"
+#include "../common/overlay/overlay.dtsi"
+#include "sdm439-qrd.dtsi"

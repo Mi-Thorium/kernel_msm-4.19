@@ -1,0 +1,66 @@
+/*&pmi632_vadc {
+// TODO: find the corect ADC channel for xiaomi sdm439
+	quiet_therm {
+		reg = <ADC_GPIO2_PU2>;
+		label = "quiet_therm";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+};
+
+&pmi632_adc_tm {
+	io-channels = <&pmi632_vadc ADC_GPIO2_PU2>;
+
+	quiet_therm {
+		reg = <ADC_GPIO2_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+	};
+};*/
+
+&pmi632_charger {
+	qcom,chg-term-src = <1>;
+	qcom,chg-term-current-ma = <(-200)>;
+	qcom,float-option = <1>;
+	qcom,auto-recharge-soc = <99>;
+	/delete-property/ qcom,sw-jeita-enable;
+	qcom,hw-jeita-enable;
+	qcom,fv-max-uv = <4400000>;
+};
+
+&pmi632_qg {
+	/*qcom,cl-feedback-on;
+	qcom,cl-max-start-soc = <10>;
+	qcom,cl-min-start-soc = <5>;
+	qcom,cl-min-temp = <150>;
+	qcom,cl-max-temp = <500>;
+	qcom,cl-max-increment = <5>;
+	qcom,cl-max-decrement = <100>;
+	qcom,cl-min-limit = <500>;
+	qcom,cl-max-limit = <100>;
+	qcom,s3-entry-ibat-ua = <18000>;
+	qcom,s3-exit-ibat-ua = <38000>;*/
+};
+
+&pmi632_lcdb {
+	/delete-property/ qcom,voltage-step-ramp;
+};
+
+&pmi632_flash0 {
+	qcom,max-current = <1000>;
+};
+
+&pmi632_torch0 {
+	qcom,max-current = <120>;
+};
+
+&pmi632_torch1 {
+	qcom,max-current = <120>;
+};
+
+&thermal_zones {
+	/delete-node/ pmi632-vbat-lvl0;
+	/delete-node/ pmi632-vbat-lvl1;
+	/delete-node/ pmi632-vbat-lvl2;
+};

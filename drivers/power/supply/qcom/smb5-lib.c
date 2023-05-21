@@ -3908,14 +3908,6 @@ static int smblib_get_prop_ufp_mode(struct smb_charger *chg)
 #endif
 
 	switch (stat & DETECTED_SRC_TYPE_MASK) {
-#if IS_ENABLED(CONFIG_MACH_FAMILY_XIAOMI_OLIVE)
-	case XIAOMI_SDM439_SNK_RP_STD_DAM_BIT:
-	case XIAOMI_SDM439_SNK_RP_1P5_DAM_BIT:
-	case XIAOMI_SDM439_SNK_RP_3P0_DAM_BIT:
-		if (xiaomi_sdm439_mach_get_family() == XIAOMI_SDM439_MACH_FAMILY_OLIVE)
-			return POWER_SUPPLY_TYPEC_SOURCE_MEDIUM;
-		break;
-#endif
 	case SNK_RP_STD_BIT:
 		return POWER_SUPPLY_TYPEC_SOURCE_DEFAULT;
 	case SNK_RP_1P5_BIT:
@@ -3927,6 +3919,11 @@ static int smblib_get_prop_ufp_mode(struct smb_charger *chg)
 	case SNK_DAM_500MA_BIT:
 	case SNK_DAM_1500MA_BIT:
 	case SNK_DAM_3000MA_BIT:
+#if IS_ENABLED(CONFIG_MACH_FAMILY_XIAOMI_OLIVE)
+		// XIAOMI_SDM439_SNK_RP_* are the same with SNK_DAM_*
+		if (xiaomi_sdm439_mach_get_family() == XIAOMI_SDM439_MACH_FAMILY_OLIVE)
+			return POWER_SUPPLY_TYPEC_SOURCE_MEDIUM;
+#endif
 		return POWER_SUPPLY_TYPEC_SINK_DEBUG_ACCESSORY;
 	default:
 		break;

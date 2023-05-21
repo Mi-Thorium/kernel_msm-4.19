@@ -15,7 +15,7 @@
 /dts-v1/;
 /plugin/;
 
-#include "qcom-dts/sdm439-qrd.dtsi"
+#include "qcom/sdm439-qrd.dtsi"
 #include "olive/overlay-olive.dtsi"
 
 / {

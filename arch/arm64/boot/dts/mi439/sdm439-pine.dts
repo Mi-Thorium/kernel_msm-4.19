@@ -13,8 +13,8 @@
 
 /dts-v1/;
 
-#include "qcom-dts/sdm439.dtsi"
-#include "qcom-dts/sdm439-mtp.dtsi"
+#include "qcom/sdm439.dtsi"
+#include "qcom/sdm439-mtp.dtsi"
 #include "pine/base-mtp-pine.dtsi"
 
 / {

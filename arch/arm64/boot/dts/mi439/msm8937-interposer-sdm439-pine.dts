@@ -13,7 +13,7 @@
 
 /dts-v1/;
 
-#include "qcom-dts/msm8937-interposer-sdm439.dtsi"
+#include "qcom/msm8937-interposer-sdm439.dtsi"
 #include "pine/base-pine.dtsi"
 
 / {

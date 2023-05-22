@@ -756,8 +756,10 @@ static int gdsc_get_resources(struct gdsc *sc, struct platform_device *pdev)
 	}
 
 	sc->gdscr = devm_ioremap(dev, res->start, resource_size(res));
-	if (sc->gdscr == NULL)
+	if (sc->gdscr == NULL) {
+		dev_err(dev, "%s: error line %d\n", __func__, __LINE__);
 		return -ENOMEM;
+	}
 
 	if (of_property_read_bool(dev->of_node, "qcom,no-config-gdscr"))
 		gdsc_regmap_config.max_register = 0;
@@ -772,6 +774,7 @@ static int gdsc_get_resources(struct gdsc *sc, struct platform_device *pdev)
 		sc->parent_regulator = devm_regulator_get(dev, "vdd_parent");
 		if (IS_ERR(sc->parent_regulator)) {
 			ret = PTR_ERR(sc->parent_regulator);
+			dev_err(dev, "%s: error line %d, ret=%d\n", __func__, __LINE__, ret);
 			if (ret != -EPROBE_DEFER)
 				dev_err(dev, "Unable to get vdd_parent regulator, ret=%d\n",
 					ret);
@@ -781,8 +784,10 @@ static int gdsc_get_resources(struct gdsc *sc, struct platform_device *pdev)
 
 	sc->clocks = devm_kcalloc(dev, sc->clock_count, sizeof(*sc->clocks),
 				  GFP_KERNEL);
-	if (sc->clock_count && !sc->clocks)
+	if (sc->clock_count && !sc->clocks) {
+		dev_err(dev, "%s: error line %d\n", __func__, __LINE__);
 		return -ENOMEM;
+	}
 
 	sc->root_clk_idx = -1;
 	for (i = 0; i < sc->clock_count; i++) {
@@ -794,6 +799,7 @@ static int gdsc_get_resources(struct gdsc *sc, struct platform_device *pdev)
 		sc->clocks[i] = devm_clk_get(dev, clock_name);
 		if (IS_ERR(sc->clocks[i])) {
 			ret = PTR_ERR(sc->clocks[i]);
+			dev_err(dev, "%s: error line %d, ret=%d\n", __func__, __LINE__, ret);
 			if (ret != -EPROBE_DEFER)
 				dev_err(dev, "Failed to get %s, ret=%d\n",
 					clock_name, ret);
@@ -825,6 +831,7 @@ static int gdsc_get_resources(struct gdsc *sc, struct platform_device *pdev)
 								reset_name);
 			if (IS_ERR(sc->reset_clocks[i])) {
 				ret = PTR_ERR(sc->reset_clocks[i]);
+				dev_err(dev, "%s: error line %d, ret=%d\n", __func__, __LINE__, ret);
 				if (ret != -EPROBE_DEFER)
 					dev_err(&pdev->dev, "Failed to get %s, ret=%d\n",
 						reset_name, ret);
@@ -864,6 +871,8 @@ static int gdsc_probe(struct platform_device *pdev)
 	struct gdsc *sc;
 	uint32_t regval, clk_dis_wait_val = 0;
 	int i, ret;
+
+	dev_info(&pdev->dev, "probe begin\n");
 
 	sc = devm_kzalloc(&pdev->dev, sizeof(*sc), GFP_KERNEL);
 	if (sc == NULL)
@@ -969,6 +978,7 @@ static int gdsc_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, sc);
 
+	dev_info(&pdev->dev, "probe end\n");
 	return 0;
 
 err:

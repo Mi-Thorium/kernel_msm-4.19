@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 TECHPACK?=y
 
-techpack-dirs := xiaomi-msm8937 xiaomi-sdm439
+techpack-dirs := audio-legacy xiaomi-msm8937 xiaomi-sdm439
 obj-${TECHPACK} += stub/ $(addsuffix /,$(subst $(srctree)/techpack/,,$(techpack-dirs)))
 
-techpack-header-dirs := xiaomi-msm8937 xiaomi-sdm439
+techpack-header-dirs := audio-legacy xiaomi-msm8937 xiaomi-sdm439
 header-${TECHPACK} += $(addsuffix /include/uapi/,$(subst $(srctree)/techpack/,,$(techpack-header-dirs)))

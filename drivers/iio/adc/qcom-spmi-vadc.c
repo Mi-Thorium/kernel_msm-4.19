@@ -93,6 +93,9 @@ struct vadc_channel_prop {
 	unsigned int hw_settle_time;
 	unsigned int avg_samples;
 	enum vadc_scale_fn_type scale_fn_type;
+
+	/* Copied from `struct iio_chan_spec` */
+	enum iio_chan_type chan_type;
 };
 
 /**
@@ -654,6 +657,7 @@ static int vadc_get_dt_channel_data(struct device *dev,
 				    struct device_node *node)
 {
 	const char *name = node->name;
+	const char *value_str;
 	u32 chan, value, varr[2];
 	int ret;
 
@@ -734,6 +738,20 @@ static int vadc_get_dt_channel_data(struct device *dev,
 	if (!ret && value < SCALE_HW_CALIB_MAX)
 		prop->scale_fn_type = value;
 
+	ret = of_property_read_string(node, "qcom,iio-chan-type-override", &value_str);
+	if (!ret) {
+		if (strcasecmp(value_str, "IIO_TEMP") == 0)
+			prop->chan_type = IIO_TEMP;
+		else if (strcasecmp(value_str, "IIO_VOLTAGE") == 0)
+			prop->chan_type = IIO_VOLTAGE;
+		else {
+			dev_err(dev, "%02x invalid iio-chan-type-override %s\n", chan, value_str);
+			prop->chan_type = -EINVAL;
+		}
+	} else {
+		prop->chan_type = -EINVAL;
+	}
+
 	dev_dbg(dev, "%02x name %s\n", chan, name);
 
 	return 0;
@@ -790,7 +808,10 @@ static int vadc_get_dt_data(struct vadc_priv *vadc, struct device_node *node)
 		else
 			iio_chan->info_mask_separate =
 			  vadc_chan->info_mask | BIT(IIO_CHAN_INFO_PROCESSED);
-		iio_chan->type = vadc_chan->type;
+		if (prop.chan_type == -EINVAL)
+			iio_chan->type = vadc_chan->type;
+		else
+			iio_chan->type = prop.chan_type;
 		iio_chan->indexed = 1;
 		iio_chan->address = index++;
 

@@ -229,14 +229,8 @@ static int mdss_pll_probe(struct platform_device *pdev)
 	pll_res->ssc_en = of_property_read_bool(pdev->dev.of_node,
 						"qcom,dsi-pll-ssc-en");
 
-#if IS_ENABLED(CONFIG_MACH_XIAOMI_SDM439)
-	if (xiaomi_sdm439_mach_get()) {
-		if (strstr(mdss_mdp_panel, "mdss_dsi_ili9881d_hdplus_video_c3e")) {
-			pr_info("%s: Disable ssc_en for mdss_dsi_ili9881d_hdplus_video_c3e panel\n", __func__);
-			pll_res->ssc_en = false;
-		}
-	}
-#endif
+	pr_info("%s: Disable ssc_en for mdss_dsi_ili9881d_hdplus_video_c3e panel\n", __func__);
+	pll_res->ssc_en = false;
 
 	if (pll_res->ssc_en) {
 		pr_info("%s: label=%s PLL SSC enabled\n", __func__, label);

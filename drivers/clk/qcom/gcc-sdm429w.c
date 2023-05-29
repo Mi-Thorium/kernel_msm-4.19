@@ -1426,7 +1426,7 @@ static struct clk_rcg2 byte0_clk_src = {
 		.vdd_class = &vdd_cx,
 		.num_rate_max = VDD_NUM - 1,
 		.rate_max = (unsigned long[VDD_NUM - 1]) {
-			[VDD_LOW] = 125000000,
+			[VDD_LOW] = 120000000,
 			[VDD_NOMINAL] = 187500000},
 	},
 };
@@ -1945,11 +1945,11 @@ static const struct freq_tbl ftbl_mdp_clk_src[] = {
 	F(50000000, P_GPLL0_OUT_MAIN, 16, 0, 0),
 	F(80000000, P_GPLL0_OUT_MAIN, 10, 0, 0),
 	F(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0),
-	F(145454545, P_GPLL0_OUT_MAIN, 5.5, 0, 0),
+	F(145450000, P_GPLL0_OUT_MAIN, 5.5, 0, 0),
 	F(160000000, P_GPLL0_OUT_MAIN, 5, 0, 0),
-	F(177777778, P_GPLL0_OUT_MAIN, 4.5, 0, 0),
+	F(177780000, P_GPLL0_OUT_MAIN, 4.5, 0, 0),
 	F(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0),
-	F(266666667, P_GPLL0_OUT_MAIN, 3, 0, 0),
+	F(266670000, P_GPLL0_OUT_MAIN, 3, 0, 0),
 	F(320000000, P_GPLL0_OUT_MAIN, 2.5, 0, 0),
 	{ }
 };
@@ -1970,7 +1970,7 @@ static struct clk_rcg2 mdp_clk_src = {
 		.num_rate_max = VDD_NUM - 1,
 		.rate_max = (unsigned long[VDD_NUM - 1]) {
 			[VDD_LOW] = 160000000,
-			[VDD_NOMINAL] = 266666667,
+			[VDD_NOMINAL] = 266670000,
 			[VDD_HIGH] = 320000000},
 	},
 };
@@ -1989,7 +1989,7 @@ static struct clk_rcg2 pclk0_clk_src = {
 		.vdd_class = &vdd_cx,
 		.num_rate_max = VDD_NUM - 1,
 		.rate_max = (unsigned long[VDD_NUM - 1]) {
-			[VDD_LOW] = 166666667,
+			[VDD_LOW] = 160000000,
 			[VDD_NOMINAL] = 250000000},
 	},
 };
@@ -2008,7 +2008,7 @@ static struct clk_rcg2 pclk1_clk_src = {
 		.vdd_class = &vdd_cx,
 		.num_rate_max = VDD_NUM - 1,
 		.rate_max = (unsigned long[VDD_NUM - 1]) {
-			[VDD_LOW] = 166666667,
+			[VDD_LOW] = 166670000,
 			[VDD_NOMINAL] = 250000000},
 	},
 };

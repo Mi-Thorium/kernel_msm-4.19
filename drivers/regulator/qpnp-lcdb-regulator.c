@@ -1,6 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  */
 
 #define pr_fmt(fmt)	"LCDB: %s: " fmt, __func__
@@ -239,9 +247,8 @@ struct qpnp_lcdb {
 	bool				lcdb_enabled;
 	bool				settings_saved;
 	bool				lcdb_sc_disable;
-	bool				voltage_step_ramp;
-	/* Tracks the secure UI mode entry/exit */
 	bool				secure_mode;
+	bool				voltage_step_ramp;
 	int				sc_count;
 	ktime_t				sc_module_enable_time;
 
@@ -473,7 +480,7 @@ static struct settings lcdb_settings_pm660l[] = {
 	SETTING(LCDB_LDO_VREG_OK_CTL, false, false),
 };
 
-/* For PMICs like pmi632/pm8150L */
+/* For PMICs like pmi632/pm855L */
 static struct settings lcdb_settings[] = {
 	SETTING(LCDB_BST_PD_CTL, false, true),
 	SETTING(LCDB_RDSON_MGMNT, false, false),
@@ -568,9 +575,23 @@ static int qpnp_lcdb_ttw_enter(struct qpnp_lcdb *lcdb)
 		lcdb->settings_saved = true;
 	}
 
+	val = HWEN_RDY_BIT;
+	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_ENABLE_CTL1_REG,
+			     &val, 1);
+	if (rc < 0) {
+		pr_err("Failed to hw_enable lcdb rc= %d\n", rc);
+		return rc;
+	}
+
 	val = (BST_SS_TIME_OVERRIDE_1MS << BST_SS_TIME_OVERRIDE_SHIFT) |
 	      (DIS_BST_PRECHG_SHORT_ALARM << BST_PRECHG_SHORT_ALARM_SHIFT);
 	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_BST_SS_CTL_REG, &val, 1);
+	if (rc < 0)
+		return rc;
+
+	val = 0;
+	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_LDO_SOFT_START_CTL_REG,
+			     &val, 1);
 	if (rc < 0)
 		return rc;
 
@@ -580,8 +601,20 @@ static int qpnp_lcdb_ttw_enter(struct qpnp_lcdb *lcdb)
 	if (rc < 0)
 		return rc;
 
-	val = 0;
-	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_LDO_SOFT_START_CTL_REG,
+	val = BOOST_DIS_PULLDOWN_BIT | BOOST_PD_STRENGTH_BIT;
+	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_BST_PD_CTL_REG,
+			     &val, 1);
+	if (rc < 0)
+		return rc;
+
+	val = LDO_DIS_PULLDOWN_BIT | LDO_PD_STRENGTH_BIT;
+	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_LDO_PD_CTL_REG,
+							&val, 1);
+	if (rc < 0)
+		return rc;
+
+	val = NCP_DIS_PULLDOWN_BIT | NCP_PD_STRENGTH_BIT;
+	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_NCP_PD_CTL_REG,
 			     &val, 1);
 	if (rc < 0)
 		return rc;
@@ -598,30 +631,6 @@ static int qpnp_lcdb_ttw_enter(struct qpnp_lcdb *lcdb)
 
 	val = 0;
 	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_BST_VREG_OK_CTL_REG,
-			     &val, 1);
-	if (rc < 0)
-		return rc;
-
-	val = BOOST_DIS_PULLDOWN_BIT;
-	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_BST_PD_CTL_REG,
-			     &val, 1);
-	if (rc < 0)
-		return rc;
-
-	val = LDO_DIS_PULLDOWN_BIT;
-	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_LDO_PD_CTL_REG,
-							&val, 1);
-	if (rc < 0)
-		return rc;
-
-	val = NCP_DIS_PULLDOWN_BIT;
-	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_NCP_PD_CTL_REG,
-			     &val, 1);
-	if (rc < 0)
-		return rc;
-
-	val = HWEN_RDY_BIT;
-	rc = qpnp_lcdb_write(lcdb, lcdb->base + LCDB_ENABLE_CTL1_REG,
 			     &val, 1);
 
 	return rc;
@@ -1335,7 +1344,7 @@ static int qpnp_lcdb_set_soft_start(struct qpnp_lcdb *lcdb,
 	rc = qpnp_lcdb_masked_write(lcdb,
 			lcdb->base + offset, SOFT_START_MASK, val);
 	if (rc < 0)
-		pr_err("Failed to write %s soft-start time %d rc=%d\n",
+		pr_err("Failed to write %s soft-start time %d rc=%d",
 			(type == LDO) ? "LDO" : "NCP", soft_start_us[i], rc);
 
 	return rc;
@@ -1529,7 +1538,7 @@ static struct regulator_ops qpnp_lcdb_ncp_ops = {
 
 static int qpnp_lcdb_regulator_register(struct qpnp_lcdb *lcdb, u8 type)
 {
-	int rc = 0, off_on_delay = 0, voltage_step = VOLTAGE_STEP_50_MV;
+	int rc = 0, off_on_delay = 0;
 	struct regulator_init_data *init_data;
 	struct regulator_config cfg = {};
 	struct regulator_desc *rdesc;
@@ -1544,16 +1553,12 @@ static int qpnp_lcdb_regulator_register(struct qpnp_lcdb *lcdb, u8 type)
 		rdesc			= &lcdb->ldo.rdesc;
 		rdesc->ops		= &qpnp_lcdb_ldo_ops;
 		rdesc->off_on_delay	= off_on_delay;
-		rdesc->n_voltages = ((MAX_VOLTAGE_MV - MIN_VOLTAGE_MV)
-					/ voltage_step) + 1;
 		rdev			= lcdb->ldo.rdev;
 	} else if (type == NCP) {
 		node			= lcdb->ncp.node;
 		rdesc			= &lcdb->ncp.rdesc;
 		rdesc->ops		= &qpnp_lcdb_ncp_ops;
 		rdesc->off_on_delay	= off_on_delay;
-		rdesc->n_voltages = ((MAX_VOLTAGE_MV - MIN_VOLTAGE_MV)
-					/ voltage_step) + 1;
 		rdev			= lcdb->ncp.rdev;
 	} else {
 		pr_err("Invalid regulator type %d\n", type);
@@ -1816,7 +1821,7 @@ static int qpnp_lcdb_init_ldo(struct qpnp_lcdb *lcdb)
 				lcdb->ldo.pd_strength ?
 				LDO_PD_STRENGTH_BIT : 0);
 			if (rc < 0) {
-				pr_err("Failed to configure LDO PD strength %s rc=%d\n",
+				pr_err("Failed to configure LDO PD strength %s rc=%d",
 						lcdb->ldo.pd_strength ?
 						"(strong)" : "(weak)", rc);
 				return rc;
@@ -1832,7 +1837,7 @@ static int qpnp_lcdb_init_ldo(struct qpnp_lcdb *lcdb)
 					SET_LDO_ILIM_MASK | EN_LDO_ILIM_BIT,
 					val);
 			if (rc < 0) {
-				pr_err("Failed to configure LDO ilim_ma (CTL1=%d) rc=%d\n",
+				pr_err("Failed to configure LDO ilim_ma (CTL1=%d) rc=%d",
 							val, rc);
 				return rc;
 			}
@@ -1842,7 +1847,7 @@ static int qpnp_lcdb_init_ldo(struct qpnp_lcdb *lcdb)
 					lcdb->base + LCDB_LDO_ILIM_CTL2_REG,
 					SET_LDO_ILIM_MASK, val);
 			if (rc < 0) {
-				pr_err("Failed to configure LDO ilim_ma (CTL2=%d) rc=%d\n",
+				pr_err("Failed to configure LDO ilim_ma (CTL2=%d) rc=%d",
 							val, rc);
 				return rc;
 			}
@@ -1923,7 +1928,7 @@ static int qpnp_lcdb_init_ncp(struct qpnp_lcdb *lcdb)
 				lcdb->ncp.pd_strength ?
 				NCP_PD_STRENGTH_BIT : 0);
 			if (rc < 0) {
-				pr_err("Failed to configure NCP PD strength %s rc=%d\n",
+				pr_err("Failed to configure NCP PD strength %s rc=%d",
 					lcdb->ncp.pd_strength ?
 					"(strong)" : "(weak)", rc);
 				return rc;
@@ -1940,7 +1945,7 @@ static int qpnp_lcdb_init_ncp(struct qpnp_lcdb *lcdb)
 						LCDB_NCP_ILIM_CTL1_REG,
 				SET_NCP_ILIM_MASK | EN_NCP_ILIM_BIT, val);
 			if (rc < 0) {
-				pr_err("Failed to configure NCP ilim_ma (CTL1=%d) rc=%d\n",
+				pr_err("Failed to configure NCP ilim_ma (CTL1=%d) rc=%d",
 								val, rc);
 				return rc;
 			}
@@ -1949,7 +1954,7 @@ static int qpnp_lcdb_init_ncp(struct qpnp_lcdb *lcdb)
 					lcdb->base + LCDB_NCP_ILIM_CTL2_REG,
 					SET_NCP_ILIM_MASK, val);
 			if (rc < 0) {
-				pr_err("Failed to configure NCP ilim_ma (CTL2=%d) rc=%d\n",
+				pr_err("Failed to configure NCP ilim_ma (CTL2=%d) rc=%d",
 							val, rc);
 				return rc;
 			}
@@ -2022,7 +2027,7 @@ static int qpnp_lcdb_init_bst(struct qpnp_lcdb *lcdb)
 				lcdb->bst.pd_strength ?
 				BOOST_PD_STRENGTH_BIT : 0);
 			if (rc < 0) {
-				pr_err("Failed to configure NCP PD strength %s rc=%d\n",
+				pr_err("Failed to configure NCP PD strength %s rc=%d",
 					lcdb->bst.pd_strength ?
 					"(strong)" : "(weak)", rc);
 				return rc;
@@ -2037,7 +2042,7 @@ static int qpnp_lcdb_init_bst(struct qpnp_lcdb *lcdb)
 				LCDB_BST_ILIM_CTL_REG,
 				SET_BST_ILIM_MASK | EN_BST_ILIM_BIT, val);
 			if (rc < 0) {
-				pr_err("Failed to configure BST ilim_ma rc=%d\n",
+				pr_err("Failed to configure BST ilim_ma rc=%d",
 									rc);
 				return rc;
 			}
@@ -2048,7 +2053,7 @@ static int qpnp_lcdb_init_bst(struct qpnp_lcdb *lcdb)
 					LCDB_PS_CTL_REG, EN_PS_BIT,
 					lcdb->bst.ps ? EN_PS_BIT : 0);
 			if (rc < 0) {
-				pr_err("Failed to disable BST PS rc=%d\n", rc);
+				pr_err("Failed to disable BST PS rc=%d", rc);
 				return rc;
 			}
 		}
@@ -2062,7 +2067,7 @@ static int qpnp_lcdb_init_bst(struct qpnp_lcdb *lcdb)
 						LCDB_PS_CTL_REG,
 						mask | EN_PS_BIT, val);
 			if (rc < 0) {
-				pr_err("Failed to configure BST PS threshold rc=%d\n",
+				pr_err("Failed to configure BST PS threshold rc=%d",
 								rc);
 				return rc;
 			}
@@ -2117,12 +2122,6 @@ static void qpnp_lcdb_pmic_config(struct qpnp_lcdb *lcdb)
 			lcdb->wa_flags |= NCP_SCP_DISABLE_WA;
 		break;
 	case PMI632_SUBTYPE:
-		lcdb->wa_flags |= FORCE_PD_ENABLE_WA;
-		break;
-	case PM8150L_SUBTYPE:
-		if (lcdb->pmic_rev_id->rev4 >= PM8150L_V3P0_REV4)
-			lcdb->voltage_step_ramp = false;
-
 		lcdb->wa_flags |= FORCE_PD_ENABLE_WA;
 		break;
 	default:
@@ -2229,6 +2228,7 @@ static int qpnp_lcdb_parse_dt(struct qpnp_lcdb *lcdb)
 	}
 
 	of_node_put(revid_dev_node);
+
 	for_each_available_child_of_node(node, temp) {
 		rc = of_property_read_string(temp, "label", &label);
 		if (rc < 0) {

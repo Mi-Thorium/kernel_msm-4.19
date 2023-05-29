@@ -16,7 +16,6 @@
 #include <linux/err.h>
 #include <linux/iopoll.h>
 #include <linux/delay.h>
-#include <linux/clk/msm-clock-generic.h>
 
 #include "mdss-pll.h"
 #include "mdss-dsi-pll.h"
@@ -25,9 +24,10 @@
 #define DSI_PLL_POLL_MAX_READS                  15
 #define DSI_PLL_POLL_TIMEOUT_US                 1000
 
-int pixel_div_set_div(struct div_clk *clk, int div)
+int pixel_div_set_div(void *context, unsigned int reg,
+			unsigned int div)
 {
-	struct mdss_pll_resources *pll = clk->priv;
+	struct mdss_pll_resources *pll = context;
 	struct dsi_pll_db *pdb;
 
 	pdb = (struct dsi_pll_db *)pll->priv;
@@ -41,11 +41,12 @@ int pixel_div_set_div(struct div_clk *clk, int div)
 	return 0;
 }
 
-int pixel_div_get_div(struct div_clk *clk)
+int pixel_div_get_div(void *context, unsigned int reg,
+			unsigned int *div)
 {
-	u32 div;
+	u32 val;
 	int rc;
-	struct mdss_pll_resources *pll = clk->priv;
+	struct mdss_pll_resources *pll = context;
 
 	if (is_gdsc_disabled(pll))
 		return 0;
@@ -56,18 +57,22 @@ int pixel_div_get_div(struct div_clk *clk)
 		return rc;
 	}
 
-	div = MDSS_PLL_REG_R(pll->pll_base, DSIPHY_SSC9);
-	div &= 0x7f;
-	pr_debug("pixel_div = %d\n", (div+1));
+	val = MDSS_PLL_REG_R(pll->pll_base, DSIPHY_SSC9);
+	val &= 0x7f;
+	pr_debug("pixel_div = %d\n", (val+1));
 
 	mdss_pll_resource_enable(pll, false);
 
-	return (div + 1);
+	val++;
+	*div = val;
+
+	return 0;
 }
 
-int set_post_div_mux_sel(struct mux_clk *clk, int sel)
+int set_post_div_mux_sel(void *context, unsigned int reg,
+			unsigned int sel)
 {
-	struct mdss_pll_resources *pll = clk->priv;
+	struct mdss_pll_resources *pll = context;
 	struct dsi_pll_db *pdb;
 
 	pdb = (struct dsi_pll_db *)pll->priv;
@@ -81,12 +86,12 @@ int set_post_div_mux_sel(struct mux_clk *clk, int sel)
 	return 0;
 }
 
-int get_post_div_mux_sel(struct mux_clk *clk)
+int get_post_div_mux_sel(void *context, unsigned int reg,
+			unsigned int *sel)
 {
-	u32 sel = 0;
 	u32 vco_cntrl = 0, cpbias_cntrl = 0;
 	int rc;
-	struct mdss_pll_resources *pll = clk->priv;
+	struct mdss_pll_resources *pll = context;
 
 	if (is_gdsc_disabled(pll))
 		return 0;
@@ -99,6 +104,7 @@ int get_post_div_mux_sel(struct mux_clk *clk)
 
 	vco_cntrl = MDSS_PLL_REG_R(pll->pll_base, DSIPHY_PLL_VCO_CTRL);
 	vco_cntrl &= 0x30;
+	pr_debug("%s: vco_cntrl 0x%x\n", __func__, vco_cntrl);
 
 	cpbias_cntrl = MDSS_PLL_REG_R(pll->pll_base,
 		DSIPHY_PLL_CHAR_PUMP_BIAS_CTRL);
@@ -106,28 +112,30 @@ int get_post_div_mux_sel(struct mux_clk *clk)
 
 	if (cpbias_cntrl == 0) {
 		if (vco_cntrl == 0x00)
-			sel = 0;
+			*sel = 0;
 		else if (vco_cntrl == 0x10)
-			sel = 2;
+			*sel = 2;
 		else if (vco_cntrl == 0x20)
-			sel = 3;
+			*sel = 3;
 		else if (vco_cntrl == 0x30)
-			sel = 4;
+			*sel = 4;
 	} else if (cpbias_cntrl == 1) {
 		if (vco_cntrl == 0x30)
-			sel = 2;
+			*sel = 2;
 		else if (vco_cntrl == 0x00)
-			sel = 5;
+			*sel = 5;
 	}
 
 	mdss_pll_resource_enable(pll, false);
+	pr_debug("%s: sel = %d\n", __func__, *sel);
 
-	return sel;
+	return 0;
 }
 
-int set_gp_mux_sel(struct mux_clk *clk, int sel)
+int set_gp_mux_sel(void *context, unsigned int reg,
+			unsigned int sel)
 {
-	struct mdss_pll_resources *pll = clk->priv;
+	struct mdss_pll_resources *pll = context;
 	struct dsi_pll_db *pdb;
 
 	pdb = (struct dsi_pll_db *)pll->priv;
@@ -141,11 +149,12 @@ int set_gp_mux_sel(struct mux_clk *clk, int sel)
 	return 0;
 }
 
-int get_gp_mux_sel(struct mux_clk *clk)
+int get_gp_mux_sel(void *context, unsigned int reg,
+			unsigned int *sel)
 {
-	u32 sel = 0;
+	u32 val = 0;
 	int rc;
-	struct mdss_pll_resources *pll = clk->priv;
+	struct mdss_pll_resources *pll = context;
 
 	if (is_gdsc_disabled(pll))
 		return 0;
@@ -156,13 +165,14 @@ int get_gp_mux_sel(struct mux_clk *clk)
 		return rc;
 	}
 
-	sel = MDSS_PLL_REG_R(pll->pll_base, DSIPHY_PLL_CTRL);
-	sel = (sel >> 5) & 0x7;
-	pr_debug("gp_cntrl = %d\n", sel);
+	val = MDSS_PLL_REG_R(pll->pll_base, DSIPHY_PLL_CTRL);
+	val = (val >> 5) & 0x7;
+	pr_debug("gp_cntrl = %d\n", val);
 
 	mdss_pll_resource_enable(pll, false);
 
-	return sel;
+	*sel = val;
+	return 0;
 }
 
 static bool pll_is_pll_locked_12nm(struct mdss_pll_resources *pll,
@@ -182,7 +192,9 @@ static bool pll_is_pll_locked_12nm(struct mdss_pll_resources *pll,
 			pr_err("DSI PLL ndx=%d status=%x failed to Lock\n",
 				pll->index, status);
 		pll_locked = false;
+		pr_debug("%s: not locked\n", __func__);
 	} else {
+		pr_debug("%s: locked\n", __func__);
 		pll_locked = true;
 	}
 
@@ -228,10 +240,10 @@ init_lock_err:
 	return rc;
 }
 
-static int dsi_pll_enable(struct clk *c)
+static int dsi_pll_enable(struct clk_hw *hw)
 {
 	int i, rc = 0;
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *pll = vco->priv;
 
 	/* Try all enable sequences until one succeeds */
@@ -287,9 +299,9 @@ relock_err:
 	return rc;
 }
 
-static void dsi_pll_disable(struct clk *c)
+static void dsi_pll_disable(struct clk_hw *hw)
 {
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *pll = vco->priv;
 	void __iomem *pll_base = pll->pll_base;
 	u32 data = 0;
@@ -643,7 +655,7 @@ static void mdss_dsi_pll_12nm_calc_ssc(struct mdss_pll_resources *pll,
 	pr_debug("mpll_ssc_peak_i=%d mpll_stepsize_i=%d mpll_mint_i=%d\n",
 		param->mpll_ssc_peak_i, param->mpll_stepsize_i,
 		param->mpll_mint_i);
-	pr_debug("mpll_frac_den=%d mpll_frac_quot_i=%d mpll_frac_rem=%d",
+	pr_debug("mpll_frac_den=%d mpll_frac_quot_i=%d mpll_frac_rem=%d\n",
 		param->mpll_frac_den, param->mpll_frac_quot_i,
 		param->mpll_frac_rem);
 }
@@ -767,10 +779,11 @@ static void pll_db_commit_12nm(struct mdss_pll_resources *pll,
 	wmb(); /* make sure register committed before preparing the clocks */
 }
 
-int pll_vco_set_rate_12nm(struct clk *c, unsigned long rate)
+int pll_vco_set_rate_12nm(struct clk_hw *hw, unsigned long rate,
+			unsigned long parent_rate)
 {
 	int rc = 0;
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *pll = vco->priv;
 	struct dsi_pll_db *pdb;
 
@@ -789,17 +802,19 @@ error:
 	return rc;
 }
 
-static unsigned long pll_vco_get_rate_12nm(struct clk *c)
+static unsigned long pll_vco_get_rate_12nm(struct clk_hw *hw)
 {
 	u64 vco_rate = 0;
 	u32 m_div_5_0 = 0, m_div_11_6 = 0, m_div = 0;
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	u64 ref_clk = vco->ref_clk_rate;
 	int rc;
 	struct mdss_pll_resources *pll = vco->priv;
 
-	if (is_gdsc_disabled(pll))
+	if (is_gdsc_disabled(pll)) {
+		pr_err("%s:gdsc disabled\n", __func__);
 		return 0;
+	}
 
 	rc = mdss_pll_resource_enable(pll, true);
 	if (rc) {
@@ -828,51 +843,57 @@ static unsigned long pll_vco_get_rate_12nm(struct clk *c)
 	return (unsigned long)vco_rate;
 }
 
-long pll_vco_round_rate_12nm(struct clk *c, unsigned long rate)
+long pll_vco_round_rate_12nm(struct clk_hw *hw, unsigned long rate,
+			unsigned long *parent_rate)
 {
 	unsigned long rrate = rate;
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 
 	if (rate < vco->min_rate)
 		rrate = vco->min_rate;
 	if (rate > vco->max_rate)
 		rrate = vco->max_rate;
 
+	*parent_rate = rrate;
+
 	return rrate;
 }
 
-enum handoff pll_vco_handoff_12nm(struct clk *c)
+unsigned long vco_12nm_recalc_rate(struct clk_hw *hw,
+					unsigned long parent_rate)
 {
 	int rc;
-	enum handoff ret = HANDOFF_DISABLED_CLK;
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *pll = vco->priv;
+	unsigned long rate = 0;
 
-	if (is_gdsc_disabled(pll))
-		return HANDOFF_DISABLED_CLK;
+	if (!pll && is_gdsc_disabled(pll)) {
+		pr_err("gdsc disabled\n");
+		return 0;
+	}
 
 	rc = mdss_pll_resource_enable(pll, true);
 	if (rc) {
 		pr_err("Failed to enable mdss dsi pll=%d\n", pll->index);
-		return ret;
+		return 0;
 	}
 
 	if (pll_is_pll_locked_12nm(pll, true)) {
 		pll->handoff_resources = true;
 		pll->pll_on = true;
-		c->rate = pll_vco_get_rate_12nm(c);
-		ret = HANDOFF_ENABLED_CLK;
+		rate = pll_vco_get_rate_12nm(hw);
+		pr_debug("%s: pll locked. rate %lu\n", __func__, rate);
 	} else {
 		mdss_pll_resource_enable(pll, false);
 	}
 
-	return ret;
+	return rate;
 }
 
-int pll_vco_prepare_12nm(struct clk *c)
+int pll_vco_prepare_12nm(struct clk_hw *hw)
 {
 	int rc = 0;
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *pll = vco->priv;
 	struct dsi_pll_db *pdb;
 	u32 data = 0;
@@ -896,8 +917,9 @@ int pll_vco_prepare_12nm(struct clk *c)
 	}
 
 	if ((pll->vco_cached_rate != 0)
-	    && (pll->vco_cached_rate == c->rate)) {
-		rc = c->ops->set_rate(c, pll->vco_cached_rate);
+	    && (pll->vco_cached_rate == clk_hw_get_rate(hw))) {
+		rc = hw->init->ops->set_rate(hw, pll->vco_cached_rate,
+				pll->vco_cached_rate);
 		if (rc) {
 			pr_err("index=%d vco_set_rate failed. rc=%d\n",
 					pll->index, rc);
@@ -928,7 +950,7 @@ int pll_vco_prepare_12nm(struct clk *c)
 	/* commit DSI vco  */
 	pll_db_commit_12nm(pll, pdb);
 
-	rc = dsi_pll_enable(c);
+	rc = dsi_pll_enable(hw);
 
 error:
 	if (rc) {
@@ -940,9 +962,9 @@ end:
 	return rc;
 }
 
-void pll_vco_unprepare_12nm(struct clk *c)
+void pll_vco_unprepare_12nm(struct clk_hw *hw)
 {
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *pll = vco->priv;
 
 	if (!pll) {
@@ -950,13 +972,13 @@ void pll_vco_unprepare_12nm(struct clk *c)
 		return;
 	}
 
-	pll->vco_cached_rate = c->rate;
-	dsi_pll_disable(c);
+	pll->vco_cached_rate = clk_hw_get_rate(hw);
+	dsi_pll_disable(hw);
 }
 
-int pll_vco_enable_12nm(struct clk *c)
+int pll_vco_enable_12nm(struct clk_hw *hw)
 {
-	struct dsi_pll_vco_clk *vco = to_vco_clk(c);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *pll = vco->priv;
 	u32 data = 0;
 

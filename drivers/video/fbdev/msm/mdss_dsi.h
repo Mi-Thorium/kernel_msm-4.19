@@ -9,7 +9,7 @@
 #include <linux/irqreturn.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/gpio.h>
-#ifdef CONFIG_BACKLIGHT_CLASS_DEVICE
+#ifdef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
 #include <linux/backlight.h>
 #endif
 
@@ -93,12 +93,6 @@ enum dsi_panel_bl_ctrl {
 	BL_PWM,
 	BL_WLED,
 	BL_DCS_CMD,
-#if IS_ENABLED(CONFIG_BACKLIGHT_KTD3136_MI439)
-	BL_KTD3136_MI439,
-#endif
-#if IS_ENABLED(CONFIG_MFD_TI_LMU_MI439)
-	BL_LM3697_MI439,
-#endif
 	UNKNOWN_CTRL,
 };
 
@@ -479,7 +473,7 @@ struct mdss_dsi_ctrl_pdata {
 	struct mdss_rect roi;
 	struct mdss_dsi_dual_pu_roi dual_roi;
 	struct pwm_device *pwm_bl;
-#ifdef CONFIG_BACKLIGHT_CLASS_DEVICE
+#ifdef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
 	struct backlight_device *raw_bd;
 #endif
 	u32 pclk_rate;
@@ -503,19 +497,6 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds lp_on_cmds;
 	struct dsi_panel_cmds lp_off_cmds;
 	struct dsi_panel_cmds status_cmds;
-
-	/* LiveDisplay cmds - Single */
-	struct dsi_panel_cmds cabc_on_cmds;
-	struct dsi_panel_cmds cabc_off_cmds;
-	struct dsi_panel_cmds ce_on_cmds;
-	struct dsi_panel_cmds ce_off_cmds;
-	struct dsi_panel_cmds reading_on_cmds;
-	struct dsi_panel_cmds reading_off_cmds;
-	/* LiveDisplay cmds - Combined*/
-	bool cabc_ce_cmds_combined;
-	struct dsi_panel_cmds cabc_ce_on_cmds;
-	struct dsi_panel_cmds cabc_ce_off_cmds;
-
 	u32 *status_valid_params;
 	u32 *status_cmds_rlen;
 	u32 *status_value;
@@ -607,28 +588,6 @@ struct mdss_dsi_ctrl_pdata {
 	bool update_phy_timing; /* flag to recalculate PHY timings */
 
 	bool phy_power_off;
-
-#if IS_ENABLED(CONFIG_MACH_FAMILY_XIAOMI_ULYSSE)
-	int xiaomi_ulysse_ID0_status;
-	int xiaomi_ulysse_ID1_status;
-	int xiaomi_ulysse_lcmio_en_gpio;
-	int xiaomi_ulysse_lcm_vci_en_gpio;
-	int xiaomi_ulysse_ocp2131_enp_gpio;
-	int xiaomi_ulysse_ocp2131_enn_gpio;
-
-	int xiaomi_ulysse_board_id0_gpio; // 20
-	int xiaomi_ulysse_board_id1_gpio; // 21
-	int xiaomi_ulysse_ID0_status_gpio; // 59
-	int xiaomi_ulysse_ID1_status_gpio; // 66
-#endif
-#if IS_ENABLED(CONFIG_MACH_FAMILY_XIAOMI_WINGTECH)
-	bool wingtech_is_Lcm_Present;
-#endif
-#if IS_ENABLED(CONFIG_MACH_XIAOMI_SDM439)
-	struct dsi_panel_cmds xiaomi_sdm439_CABC_off_cmds;
-	struct dsi_panel_cmds xiaomi_sdm439_CE_off_cmds;
-	struct dsi_panel_cmds xiaomi_sdm439_default_gamma_cmds;
-#endif
 };
 
 struct dsi_status_data {
@@ -740,7 +699,7 @@ int mdss_panel_get_dst_fmt(u32 bpp, char mipi_mode, u32 pixel_packing,
 
 int mdss_dsi_register_recovery_handler(struct mdss_dsi_ctrl_pdata *ctrl,
 		struct mdss_intf_recovery *recovery);
-#ifndef CONFIG_BACKLIGHT_CLASS_DEVICE
+#ifndef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
 void mdss_dsi_unregister_bl_settings(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 #endif
 void mdss_dsi_panel_dsc_pps_send(struct mdss_dsi_ctrl_pdata *ctrl,

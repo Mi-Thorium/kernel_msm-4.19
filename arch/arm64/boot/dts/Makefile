@@ -15,6 +15,7 @@ subdir-y += hisilicon
 subdir-y += lg
 subdir-y += marvell
 subdir-y += mediatek
+subdir-y += motorola-msm8937
 subdir-y += nvidia
 #subdir-y += qcom
 subdir-y += realtek

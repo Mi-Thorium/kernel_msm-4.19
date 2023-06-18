@@ -11,6 +11,7 @@ source "techpack/data/Kconfig"
 
 source "techpack/camera-legacy/Kconfig"
 source "techpack/camera-legacy-m/Kconfig"
+source "techpack/motorola-msm8937/Kconfig"
 source "techpack/xiaomi-msm8937/Kconfig"
 source "techpack/xiaomi-sdm439/Kconfig"
 

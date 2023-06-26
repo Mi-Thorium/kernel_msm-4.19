@@ -42,6 +42,9 @@
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/subsystem_notif.h>
 
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+#include <motorola-msm8937/mach.h>
+#endif
 
 #define DEVICE "wcnss_wlan"
 #define CTRL_DEVICE "wcnss_ctrl"
@@ -274,13 +277,14 @@ static struct notifier_block wnb = {
 	.notifier_call = wcnss_notif_cb,
 };
 
-#define NVBIN_FILE "wlan/prima/WCNSS_qcom_wlan_nv"
+#define NVBIN_DIR "wlan/prima/"
+#define NVBIN_FILE "WCNSS_qcom_wlan_nv"
 
 /* On SMD channel 4K of maximum data can be transferred, including message
  * header, so NV fragment size as next multiple of 1Kb is 3Kb.
  */
 #define NV_FRAGMENT_SIZE  3072
-#define NVBIN_FILE_SIZE 64
+#define NVBIN_PATH_SIZE 64
 #define IRIS_VARIANT_SIZE 8
 #define MAX_CALIBRATED_DATA_SIZE  (64 * 1024)
 #define LAST_FRAGMENT        BIT(0)
@@ -477,7 +481,7 @@ static struct {
 	unsigned int wake_state_bit;
 	struct bt_profile_state bt_state;
 	u32 multi_sku;
-	char nv_name[NVBIN_FILE_SIZE];
+	char nv_name[NVBIN_PATH_SIZE];
 	u32 sw_pta;
 } *penv = NULL;
 
@@ -2615,24 +2619,32 @@ static DECLARE_RWSEM(wcnss_pm_sem);
 
 int wcnss_get_nv_name(char *nv_name)
 {
+	char filename_prefix[10] = "";
 	char variant[8] = {0};
 	int ret;
+
+#if IS_ENABLED(CONFIG_MACH_MOTOROLA_MSM8937)
+	if (motorola_msm8937_mach_get() != MOTOROLA_MSM8937_MACH_UNKNOWN) {
+		scnprintf(filename_prefix, sizeof(filename_prefix), "%s_",
+			motorola_msm8937_mach_get_variant_str());
+	}
+#endif
 
 	if (penv->multi_sku) {
 		ret = wcnss_get_iris_name(variant);
 		if (ret) {
 			wcnss_log(ERR, "Invalid IRIS name using default one\n");
-			scnprintf(nv_name, NVBIN_FILE_SIZE, "%s.bin",
-				  NVBIN_FILE);
-			return 0;
+			goto default_name;
 		}
 
-		scnprintf(nv_name, NVBIN_FILE_SIZE, "%s_%s.bin",
-			  NVBIN_FILE, variant);
-	} else {
-		scnprintf(nv_name, NVBIN_FILE_SIZE, "%s.bin",
-			  NVBIN_FILE);
+		scnprintf(nv_name, NVBIN_PATH_SIZE, "%s%s%s_%s.bin",
+			  NVBIN_DIR, filename_prefix, NVBIN_FILE, variant);
+		return 0;
 	}
+
+default_name:
+	scnprintf(nv_name, NVBIN_PATH_SIZE, "%s%s%s.bin",
+		NVBIN_DIR, filename_prefix, NVBIN_FILE);
 
 	return 0;
 }

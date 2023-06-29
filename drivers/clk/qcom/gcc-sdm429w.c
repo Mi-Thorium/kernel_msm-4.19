@@ -4411,7 +4411,6 @@ static void fixup_for_qm215(struct platform_device *pdev,
 	gcc_sdm429w_desc.clks[GCC_OXILI_TIMER_CLK] = NULL;
 	gcc_sdm429w_desc.clks[ESC1_CLK_SRC] = NULL;
 	gcc_sdm429w_desc.clks[GCC_MDSS_ESC1_CLK] = NULL;
-	gcc_sdm429w_desc.clks[GCC_IPA_TBU_CLK] = NULL;
 }
 
 static void fixup_for_msm8937(struct platform_device *pdev,
@@ -4509,6 +4508,7 @@ static const struct of_device_id gcc_sdm429w_match_table[] = {
 	{ .compatible = "qcom,gcc-qm215" },
 	{ .compatible = "qcom,gcc-sdm439" },
 	{ .compatible = "qcom,gcc-msm8917" },
+	{ .compatible = "qcom,gcc-msm8920" },
 	{ .compatible = "qcom,gcc-msm8937" },
 	{ .compatible = "qcom,gcc-msm8940" },
 	{ }
@@ -4520,7 +4520,7 @@ static int gcc_sdm429w_probe(struct platform_device *pdev)
 	struct regmap *regmap;
 	struct clk *clk;
 	int ret, speed_bin = 0;
-	bool qm215, is_sdm439, msm8917, msm8937, msm8940;
+	bool qm215, is_sdm439, msm8917, msm8920, msm8937, msm8940;
 	u32 val;
 
 	qm215 = of_device_is_compatible(pdev->dev.of_node,
@@ -4531,6 +4531,9 @@ static int gcc_sdm429w_probe(struct platform_device *pdev)
 
 	msm8917 = of_device_is_compatible(pdev->dev.of_node,
 						"qcom,gcc-msm8917");
+
+	msm8920 = of_device_is_compatible(pdev->dev.of_node,
+						"qcom,gcc-msm8920");
 
 	msm8937 = of_device_is_compatible(pdev->dev.of_node,
 						"qcom,gcc-msm8937");
@@ -4564,10 +4567,10 @@ static int gcc_sdm429w_probe(struct platform_device *pdev)
 		regmap_write(regmap, 0x5B00C, val);
 	}
 
-	if (qm215 || msm8917 || msm8937 || msm8940)
+	if (qm215 || msm8917 || msm8920 || msm8937 || msm8940)
 		get_speed_bin(pdev, &speed_bin);
 
-	if (qm215 || msm8917) {
+	if (qm215 || msm8917 || msm8920) {
 		/* Configure Sleep and Wakeup cycles for GMEM clock */
 		regmap_update_bits(regmap, gcc_oxili_gmem_clk.clkr.enable_reg,
 				0xff0, 0xff0);
@@ -4577,7 +4580,7 @@ static int gcc_sdm429w_probe(struct platform_device *pdev)
 				0xf0, 0xf0);
 	}
 
-	if (qm215 || msm8917) {
+	if (qm215 || msm8917 || msm8920) {
 		fixup_for_qm215(pdev, regmap, speed_bin);
 		if (msm8917) {
 			blsp1_qup2_spi_apps_clk_src.freq_tbl =
@@ -4593,6 +4596,8 @@ static int gcc_sdm429w_probe(struct platform_device *pdev)
 			blsp2_qup3_spi_apps_clk_src.freq_tbl =
 				ftbl_blsp1_qup1_spi_apps_clk_src_msm8917;
 		}
+		if (!msm8920)
+			gcc_sdm429w_desc.clks[GCC_IPA_TBU_CLK] = NULL;
 	}
 
 	if (is_sdm439)

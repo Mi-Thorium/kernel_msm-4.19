@@ -46,7 +46,7 @@ extern void xiaomi_sdm439_ilitek_call_resume_work(void);
 
 static bool display_on = true;
 
-bool is_display_on()
+bool is_display_on(void)
 {
 	return display_on;
 }

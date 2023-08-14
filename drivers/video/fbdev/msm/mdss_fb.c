@@ -959,7 +959,7 @@ static ssize_t mdss_fb_change_cabc(struct device *dev,
 
 end:
 	mutex_unlock(&mfd->mdss_sysfs_lock);
-	return ret < 0 ? ret : len;
+	return len;
 }
 
 static ssize_t mdss_fb_get_cabc(struct device *dev,
@@ -1029,7 +1029,7 @@ static ssize_t mdss_fb_change_ce(struct device *dev,
 
 end:
 	mutex_unlock(&mfd->mdss_sysfs_lock);
-	return ret < 0 ? ret : len;
+	return len;
 }
 
 static ssize_t mdss_fb_get_ce(struct device *dev,

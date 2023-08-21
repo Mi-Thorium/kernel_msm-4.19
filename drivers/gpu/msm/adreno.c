@@ -4188,7 +4188,7 @@ static struct platform_driver kgsl_bus_platform_driver = {
 	}
 };
 
-static int __init kgsl_3d_init(void)
+int kgsl_3d_init(void)
 {
 	int ret;
 
@@ -4203,14 +4203,11 @@ static int __init kgsl_3d_init(void)
 	return ret;
 }
 
-static void __exit kgsl_3d_exit(void)
+void kgsl_3d_exit(void)
 {
 	platform_driver_unregister(&adreno_platform_driver);
 	platform_driver_unregister(&kgsl_bus_platform_driver);
 }
-
-module_init(kgsl_3d_init);
-module_exit(kgsl_3d_exit);
 
 MODULE_DESCRIPTION("3D Graphics driver");
 MODULE_LICENSE("GPL v2");

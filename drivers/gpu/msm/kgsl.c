@@ -5466,8 +5466,11 @@ _flush_mem_workqueue(struct work_struct *work)
 	flush_workqueue(kgsl_driver.mem_workqueue);
 }
 
+extern void kgsl_3d_exit(void);
 static void kgsl_core_exit(void)
 {
+	kgsl_3d_exit();
+
 	kgsl_events_exit();
 	kgsl_core_debugfs_close();
 
@@ -5498,6 +5501,7 @@ static void kgsl_core_exit(void)
 		ARRAY_SIZE(kgsl_driver.devp));
 }
 
+extern int kgsl_3d_init(void);
 static int __init kgsl_core_init(void)
 {
 	int result = 0;
@@ -5591,6 +5595,8 @@ static int __init kgsl_core_init(void)
 
 	memfree.list = kcalloc(MEMFREE_ENTRIES, sizeof(struct memfree_entry),
 		GFP_KERNEL);
+
+	kgsl_3d_init();
 
 	return 0;
 

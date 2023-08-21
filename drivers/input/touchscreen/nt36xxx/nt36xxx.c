@@ -1903,8 +1903,6 @@ static void __exit nvt_driver_exit(void)
 module_init(nvt_driver_init);
 module_exit(nvt_driver_exit);
 
-MODULE_DESCRIPTION("Novatek Touchscreen Driver");
-
 #else  /* TOUCHSCREEN_NT36XXX_SPI */
 
 #include <linux/kernel.h>
@@ -4477,7 +4475,7 @@ static void __exit nvt_spi_driver_exit(void)
 module_init(nvt_spi_driver_init);
 module_exit(nvt_spi_driver_exit);
 
+#endif
+
 MODULE_DESCRIPTION("Novatek Touchscreen Driver");
 MODULE_LICENSE("GPL v2");
-
-#endif

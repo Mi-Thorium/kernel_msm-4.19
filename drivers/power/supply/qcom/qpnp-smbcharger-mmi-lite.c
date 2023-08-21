@@ -153,7 +153,6 @@ struct smbchg_chip {
 	bool				skip_usb_suspend_for_fake_battery;
 	bool				hvdcp_not_supported;
 	bool				otg_pinctrl;
-	bool				usbid_gpio_enabled;
 	u8				original_usbin_allowance;
 	struct parallel_usb_cfg		parallel;
 	struct delayed_work		parallel_en_work;
@@ -6621,11 +6620,6 @@ static irqreturn_t usbid_change_handler(int irq, void *_chip)
 	pr_smb(PR_MISC, "setting usb psy OTG = %d\n",
 			otg_present ? 1 : 0);
 
-	if (chip->usbid_gpio_enabled) {
-		pr_smb(PR_INTERRUPT, "gpio usbid triggered\n");
-		return IRQ_HANDLED;
-	}
-
 	extcon_set_state_sync(chip->extcon, EXTCON_USB_HOST, otg_present);
 
 	if (otg_present)
@@ -7391,9 +7385,6 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 
 	chip->enabled_weak_charger_check = of_property_read_bool(node,
 					"qcom,weak-charger-check-enable");
-
-	chip->usbid_gpio_enabled = of_property_read_bool(node,
-						"qcom,usbid-gpio-enabled");
 
 	/* parse the battery missing detection pin source */
 	rc = of_property_read_string(chip->pdev->dev.of_node,

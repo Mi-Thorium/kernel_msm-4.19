@@ -10,3 +10,4 @@ obj-$(CONFIG_OLPC)		+= olpc/
 obj-$(CONFIG_GOLDFISH)		+= goldfish/
 obj-$(CONFIG_CHROME_PLATFORMS)	+= chrome/
 obj-$(CONFIG_ARCH_QCOM)		+= msm/
+obj-$(CONFIG_MACH_MOTOROLA_MSM8937) += motorola-msm8937/

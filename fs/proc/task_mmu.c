@@ -21,6 +21,7 @@
 #include <linux/pkeys.h>
 #include <linux/mm_inline.h>
 #include <linux/ctype.h>
+#include <linux/export.h>
 
 #include <asm/elf.h>
 #include <asm/tlb.h>
@@ -1672,11 +1673,13 @@ int proc_reclaim_notifier_register(struct notifier_block *nb)
 {
 	return blocking_notifier_chain_register(&proc_reclaim_notifier, nb);
 }
+EXPORT_SYMBOL(proc_reclaim_notifier_register);
 
 int proc_reclaim_notifier_unregister(struct notifier_block *nb)
 {
 	return blocking_notifier_chain_unregister(&proc_reclaim_notifier, nb);
 }
+EXPORT_SYMBOL(proc_reclaim_notifier_unregister);
 
 static void proc_reclaim_notify(unsigned long pid, void *rp)
 {
@@ -1733,6 +1736,7 @@ int reclaim_address_space(struct address_space *mapping,
 
 	return ret;
 }
+EXPORT_SYMBOL(reclaim_address_space);
 
 static int reclaim_pte_range(pmd_t *pmd, unsigned long addr,
 				unsigned long end, struct mm_walk *walk)

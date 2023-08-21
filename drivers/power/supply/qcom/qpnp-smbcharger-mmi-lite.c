@@ -269,11 +269,6 @@ struct smbchg_chip {
 	struct led_classdev		led_cdev;
 	bool				skip_usb_notification;
 	struct iio_channel		*vchg_vadc_chan;
-	bool				enabled_weak_charger_check;
-	bool				adapter_vbus_collapse_flag;
-	int				weak_charger_valid_cnt;
-	ktime_t			weak_charger_valid_cnt_ktmr;
-	ktime_t			adapter_vbus_collapse_ktmr;
 
 	/* voters */
 	struct votable			*fcc_votable;
@@ -6278,105 +6273,6 @@ out:
 }
 
 /**
- * is_vbus_collapse() - this is called used to detect whether vbus collapse
- * @chip: pointer to smbchg_chip chip
- */
-static bool is_vbus_collapse(struct smbchg_chip *chip)
-{
-	int rc;
-	u8 reg;
-
-	rc = smbchg_read(chip, &reg, chip->usb_chgpth_base + RT_STS, 1);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't read usb rt status rc = %d\n", rc);
-		return false;
-	}
-
-	return (reg & USBIN_UV_BIT);
-}
-
-#define WEAK_CHARGER_VALID_DELTA_MS   500
-#define WEAK_CHARGER_CURRENT    1000
-#define WEAK_CHARGER_CNT_DELTA_MS    1000
-/**
- * weak_charger_check() - this is called used to detect weak charger
- * @chip: pointer to smbchg_chip chip
- */
-static int weak_charger_check(void *_chip)
-{
-	int rc;
-	bool vbus_collapse;
-	ktime_t delta_ktmr;
-	struct smbchg_chip *chip = _chip;
-	union power_supply_propval prop = {0, };
-
-	if (!chip->enabled_weak_charger_check)
-		return 0;
-
-	if (chip->usb_psy) {
-		rc = chip->usb_psy->get_property(chip->usb_psy,
-			POWER_SUPPLY_PROP_TYPE, &prop);
-		if (rc < 0) {
-			dev_err(chip->dev,
-			"could not read USB current_max property, rc=%d\n", rc);
-			return 0;
-		}
-	} else
-		return 0;
-
-	vbus_collapse = is_vbus_collapse(chip);
-	if (vbus_collapse && (prop.intval == POWER_SUPPLY_TYPE_USB_DCP)) {
-		/* DCP VBUS collapse  */
-		chip->adapter_vbus_collapse_ktmr = ktime_get_boottime();
-		chip->adapter_vbus_collapse_flag = true;
-	} else if (!vbus_collapse && (prop.intval == POWER_SUPPLY_TYPE_USB_DCP)
-		&& (chip->adapter_vbus_collapse_flag)) {
-		/* DCP VBUS recovery from last collapse*/
-		chip->adapter_vbus_collapse_flag = false;
-		delta_ktmr = ktime_sub(ktime_get_boottime(),
-			chip->adapter_vbus_collapse_ktmr);
-
-		if (ktime_to_ms(delta_ktmr) > WEAK_CHARGER_VALID_DELTA_MS) {
-			chip->weak_charger_valid_cnt = 0;
-			return 0;
-		}
-
-		pr_info("weak charger valid: %lld,%lld,%lld,%d\n",
-			ktime_to_ms(delta_ktmr),
-			ktime_to_ms(ktime_get_boottime()),
-			ktime_to_ms(chip->adapter_vbus_collapse_ktmr),
-			chip->weak_charger_valid_cnt);
-
-		chip->weak_charger_valid_cnt++;
-		if (1 == chip->weak_charger_valid_cnt) {
-			chip->weak_charger_valid_cnt_ktmr =
-				ktime_get_boottime();
-		} else if (2 == chip->weak_charger_valid_cnt) {
-			chip->weak_charger_valid_cnt = 0;
-			delta_ktmr = ktime_sub(ktime_get_boottime(),
-				chip->weak_charger_valid_cnt_ktmr);
-			if (ktime_to_ms(delta_ktmr) >
-				WEAK_CHARGER_CNT_DELTA_MS) {
-				return 0;
-			}
-			pr_info("weak charger, set weak charger limit current\n");
-			chip->usb_target_current_ma = WEAK_CHARGER_CURRENT;
-			chip->usb_tl_current_ma = calc_thermal_limited_current(
-				chip, chip->usb_target_current_ma);
-			smbchg_set_usb_current_max(
-				chip, chip->usb_tl_current_ma);
-			power_supply_set_current_limit(chip->usb_psy,
-				chip->usb_target_current_ma * 1000);
-			}
-		} else {
-		chip->adapter_vbus_collapse_flag = false;
-		chip->weak_charger_valid_cnt = 0;
-	}
-
-	return 0;
-}
-
-/**
  * usbin_uv_handler() - this is called when USB charger is removed
  * @chip: pointer to smbchg_chip chip
  * @rt_stat: the status bit indicating chg insertion/removal
@@ -6401,8 +6297,6 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 		chip->hvdcp_3_det_ignore_uv ? "Ignoring":"",
 		chip->usb_present, reg, chip->hvdcp_3_det_ignore_uv,
 		aicl_level);
-
-	weak_charger_check(_chip);
 
 	/*
 	 * set usb_psy's dp=f dm=f if this is a new insertion, i.e. it is
@@ -7382,9 +7276,6 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 					"qcom,force-aicl-rerun");
 	chip->skip_usb_suspend_for_fake_battery = of_property_read_bool(node,
 				"qcom,skip-usb-suspend-for-fake-battery");
-
-	chip->enabled_weak_charger_check = of_property_read_bool(node,
-					"qcom,weak-charger-check-enable");
 
 	/* parse the battery missing detection pin source */
 	rc = of_property_read_string(chip->pdev->dev.of_node,

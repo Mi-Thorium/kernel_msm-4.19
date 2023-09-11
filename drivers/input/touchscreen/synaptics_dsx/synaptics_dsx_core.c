@@ -147,6 +147,10 @@ struct drm_panel *active_panel;
 #endif
 #endif
 
+#if !defined(USE_EARLYSUSPEND) && defined(CONFIG_FB)
+#define USE_FB_NOTIFIER
+#endif
+
 #ifdef USE_EARLYSUSPEND
 static int synaptics_rmi4_early_suspend(struct early_suspend *h);
 
@@ -4659,6 +4663,11 @@ err_drm_reg:
 	return retval;
 }
 
+#ifdef USE_FB_NOTIFIER
+static int synaptics_rmi4_fb_notifier_cb(struct notifier_block *noti,
+				    unsigned long event, void *data);
+#endif
+
 static void synaptics_rmi4_defer_probe(struct work_struct *work)
 {
 	int retval;
@@ -4743,7 +4752,13 @@ static void synaptics_rmi4_defer_probe(struct work_struct *work)
 		goto err_set_input_dev;
 	}
 
-#ifdef USE_EARLYSUSPEND
+#ifdef USE_FB_NOTIFIER
+	rmi4_data->fb_notifier.notifier_call = synaptics_rmi4_fb_notifier_cb;
+	retval = fb_register_client(&rmi4_data->fb_notifier);
+	if (retval)
+		dev_err(&pdev->dev,
+			"Unable to register fb_notifier: %d\n", retval);
+#elif USE_EARLYSUSPEND
 	rmi4_data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	rmi4_data->early_suspend.suspend = synaptics_rmi4_early_suspend;
 	rmi4_data->early_suspend.resume = synaptics_rmi4_late_resume;
@@ -4841,7 +4856,9 @@ err_virtual_buttons:
 	synaptics_rmi4_irq_enable(rmi4_data, false, false);
 
 err_enable_irq:
-#ifdef USE_EARLYSUSPEND
+#ifdef USE_FB_NOTIFIER
+	fb_unregister_client(&rmi4_data->fb_notifier);
+#elif USE_EARLYSUSPEND
 	unregister_early_suspend(&rmi4_data->early_suspend);
 #endif
 
@@ -4935,7 +4952,9 @@ static int synaptics_rmi4_remove(struct platform_device *pdev)
 				&rmi4_data->fb_notifier);
 #endif
 
-#ifdef USE_EARLYSUSPEND
+#ifdef USE_FB_NOTIFIER
+	fb_unregister_client(&rmi4_data->fb_notifier);
+#elif USE_EARLYSUSPEND
 	unregister_early_suspend(&rmi4_data->early_suspend);
 #endif
 
@@ -5020,6 +5039,35 @@ static int synaptics_rmi4_dsi_panel_notifier_cb(struct notifier_block *self,
 
 	return 0;
 }
+
+#ifdef USE_FB_NOTIFIER
+static int synaptics_rmi4_fb_notifier_cb(struct notifier_block *noti,
+				    unsigned long event, void *data)
+{
+	struct fb_event *ev_data = data;
+	struct synaptics_rmi4_data *rmi4_data =
+			container_of(noti, struct synaptics_rmi4_data,
+			fb_notifier);
+	int *blank;
+
+	if (ev_data && ev_data->data && event == FB_EVENT_BLANK && rmi4_data) {
+		blank = ev_data->data;
+		if (*blank == FB_BLANK_UNBLANK ||
+		    *blank == FB_BLANK_NORMAL) {
+			if (rmi4_data->initialized)
+				synaptics_rmi4_resume(&rmi4_data->pdev->dev);
+			rmi4_data->fb_ready = true;
+		} else if (*blank == FB_BLANK_POWERDOWN) {
+			synaptics_rmi4_secure_touch_stop(rmi4_data, false);
+			if (rmi4_data->initialized)
+				synaptics_rmi4_suspend(&rmi4_data->pdev->dev);
+			rmi4_data->fb_ready = false;
+		}
+	}
+
+	return 0;
+}
+#endif
 
 #ifdef USE_EARLYSUSPEND
 static int synaptics_rmi4_early_suspend(struct early_suspend *h)

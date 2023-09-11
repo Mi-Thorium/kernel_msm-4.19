@@ -138,7 +138,9 @@ static int synaptics_rmi4_reset_device(struct synaptics_rmi4_data *rmi4_data,
 		bool rebuild);
 static int synaptics_rmi4_dsi_panel_notifier_cb(struct notifier_block *self,
 		unsigned long event, void *data);
+#ifdef CONFIG_DRM
 struct drm_panel *active_panel;
+#endif
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #ifndef CONFIG_FB
 #define USE_EARLYSUSPEND
@@ -4614,6 +4616,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	rmi4_data->initialized = false;
 	rmi4_data->fb_notifier.notifier_call =
 					synaptics_rmi4_dsi_panel_notifier_cb;
+#ifdef CONFIG_DRM
 	if (active_panel) {
 		retval = drm_panel_notifier_register(active_panel,
 				&rmi4_data->fb_notifier);
@@ -4624,6 +4627,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 			goto err_drm_reg;
 		}
 	}
+#endif
 
 	/* Initialize secure touch */
 	synaptics_rmi4_secure_touch_init(rmi4_data);
@@ -4643,11 +4647,13 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	return retval;
 
 err_probe_wq:
+#ifdef CONFIG_DRM
 	if (active_panel)
 		drm_panel_notifier_unregister(active_panel,
 				&rmi4_data->fb_notifier);
 
 err_drm_reg:
+#endif
 	kfree(rmi4_data);
 
 	return retval;
@@ -4667,6 +4673,7 @@ static void synaptics_rmi4_defer_probe(struct work_struct *work)
 	hw_if = rmi4_data->hw_if;
 	bdata = hw_if->board_data;
 
+#ifdef CONFIG_DRM
 	init_completion(&rmi4_data->drm_init_done);
 	retval = wait_for_completion_interruptible(&rmi4_data->drm_init_done);
 	if (retval < 0) {
@@ -4675,6 +4682,7 @@ static void synaptics_rmi4_defer_probe(struct work_struct *work)
 				__func__);
 		goto err_drm_init_wait;
 	}
+#endif
 
 	retval = synaptics_rmi4_get_reg(rmi4_data, true);
 	if (retval < 0) {
@@ -4876,10 +4884,12 @@ err_enable_reg:
 	synaptics_rmi4_get_reg(rmi4_data, false);
 
 err_get_reg:
+#ifdef CONFIG_DRM
 err_drm_init_wait:
 	if (active_panel)
 		drm_panel_notifier_unregister(active_panel,
 				&rmi4_data->fb_notifier);
+#endif
 	cancel_work_sync(&rmi4_data->rmi4_probe_work);
 	destroy_workqueue(rmi4_data->rmi4_probe_wq);
 	kfree(rmi4_data);
@@ -4919,9 +4929,11 @@ static int synaptics_rmi4_remove(struct platform_device *pdev)
 
 	synaptics_rmi4_irq_enable(rmi4_data, false, false);
 
+#ifdef CONFIG_DRM
 	if (active_panel)
 		drm_panel_notifier_unregister(active_panel,
 				&rmi4_data->fb_notifier);
+#endif
 
 #ifdef USE_EARLYSUSPEND
 	unregister_early_suspend(&rmi4_data->early_suspend);
@@ -4997,8 +5009,10 @@ static int synaptics_rmi4_dsi_panel_notifier_cb(struct notifier_block *self,
 				if (rmi4_data->initialized)
 					synaptics_rmi4_resume(
 							&rmi4_data->pdev->dev);
+#ifdef CONFIG_DRM
 				else
 					complete(&rmi4_data->drm_init_done);
+#endif
 				rmi4_data->fb_ready = true;
 			}
 		}

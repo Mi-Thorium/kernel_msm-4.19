@@ -138,11 +138,17 @@ static int synaptics_rmi4_reset_device(struct synaptics_rmi4_data *rmi4_data,
 		bool rebuild);
 static int synaptics_rmi4_dsi_panel_notifier_cb(struct notifier_block *self,
 		unsigned long event, void *data);
+#ifdef CONFIG_DRM
 struct drm_panel *active_panel;
+#endif
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #ifndef CONFIG_FB
 #define USE_EARLYSUSPEND
 #endif
+#endif
+
+#if !defined(USE_EARLYSUSPEND) && defined(CONFIG_FB)
+#define USE_FB_NOTIFIER
 #endif
 
 #ifdef USE_EARLYSUSPEND
@@ -4614,6 +4620,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	rmi4_data->initialized = false;
 	rmi4_data->fb_notifier.notifier_call =
 					synaptics_rmi4_dsi_panel_notifier_cb;
+#ifdef CONFIG_DRM
 	if (active_panel) {
 		retval = drm_panel_notifier_register(active_panel,
 				&rmi4_data->fb_notifier);
@@ -4624,6 +4631,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 			goto err_drm_reg;
 		}
 	}
+#endif
 
 	/* Initialize secure touch */
 	synaptics_rmi4_secure_touch_init(rmi4_data);
@@ -4643,15 +4651,22 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	return retval;
 
 err_probe_wq:
+#ifdef CONFIG_DRM
 	if (active_panel)
 		drm_panel_notifier_unregister(active_panel,
 				&rmi4_data->fb_notifier);
 
 err_drm_reg:
+#endif
 	kfree(rmi4_data);
 
 	return retval;
 }
+
+#ifdef USE_FB_NOTIFIER
+static int synaptics_rmi4_fb_notifier_cb(struct notifier_block *noti,
+				    unsigned long event, void *data);
+#endif
 
 static void synaptics_rmi4_defer_probe(struct work_struct *work)
 {
@@ -4667,6 +4682,7 @@ static void synaptics_rmi4_defer_probe(struct work_struct *work)
 	hw_if = rmi4_data->hw_if;
 	bdata = hw_if->board_data;
 
+#ifdef CONFIG_DRM
 	init_completion(&rmi4_data->drm_init_done);
 	retval = wait_for_completion_interruptible(&rmi4_data->drm_init_done);
 	if (retval < 0) {
@@ -4675,6 +4691,7 @@ static void synaptics_rmi4_defer_probe(struct work_struct *work)
 				__func__);
 		goto err_drm_init_wait;
 	}
+#endif
 
 	retval = synaptics_rmi4_get_reg(rmi4_data, true);
 	if (retval < 0) {
@@ -4735,7 +4752,13 @@ static void synaptics_rmi4_defer_probe(struct work_struct *work)
 		goto err_set_input_dev;
 	}
 
-#ifdef USE_EARLYSUSPEND
+#ifdef USE_FB_NOTIFIER
+	rmi4_data->fb_notifier.notifier_call = synaptics_rmi4_fb_notifier_cb;
+	retval = fb_register_client(&rmi4_data->fb_notifier);
+	if (retval)
+		dev_err(&pdev->dev,
+			"Unable to register fb_notifier: %d\n", retval);
+#elif USE_EARLYSUSPEND
 	rmi4_data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	rmi4_data->early_suspend.suspend = synaptics_rmi4_early_suspend;
 	rmi4_data->early_suspend.resume = synaptics_rmi4_late_resume;
@@ -4833,7 +4856,9 @@ err_virtual_buttons:
 	synaptics_rmi4_irq_enable(rmi4_data, false, false);
 
 err_enable_irq:
-#ifdef USE_EARLYSUSPEND
+#ifdef USE_FB_NOTIFIER
+	fb_unregister_client(&rmi4_data->fb_notifier);
+#elif USE_EARLYSUSPEND
 	unregister_early_suspend(&rmi4_data->early_suspend);
 #endif
 
@@ -4876,10 +4901,12 @@ err_enable_reg:
 	synaptics_rmi4_get_reg(rmi4_data, false);
 
 err_get_reg:
+#ifdef CONFIG_DRM
 err_drm_init_wait:
 	if (active_panel)
 		drm_panel_notifier_unregister(active_panel,
 				&rmi4_data->fb_notifier);
+#endif
 	cancel_work_sync(&rmi4_data->rmi4_probe_work);
 	destroy_workqueue(rmi4_data->rmi4_probe_wq);
 	kfree(rmi4_data);
@@ -4919,11 +4946,15 @@ static int synaptics_rmi4_remove(struct platform_device *pdev)
 
 	synaptics_rmi4_irq_enable(rmi4_data, false, false);
 
+#ifdef CONFIG_DRM
 	if (active_panel)
 		drm_panel_notifier_unregister(active_panel,
 				&rmi4_data->fb_notifier);
+#endif
 
-#ifdef USE_EARLYSUSPEND
+#ifdef USE_FB_NOTIFIER
+	fb_unregister_client(&rmi4_data->fb_notifier);
+#elif USE_EARLYSUSPEND
 	unregister_early_suspend(&rmi4_data->early_suspend);
 #endif
 
@@ -4997,8 +5028,10 @@ static int synaptics_rmi4_dsi_panel_notifier_cb(struct notifier_block *self,
 				if (rmi4_data->initialized)
 					synaptics_rmi4_resume(
 							&rmi4_data->pdev->dev);
+#ifdef CONFIG_DRM
 				else
 					complete(&rmi4_data->drm_init_done);
+#endif
 				rmi4_data->fb_ready = true;
 			}
 		}
@@ -5006,6 +5039,35 @@ static int synaptics_rmi4_dsi_panel_notifier_cb(struct notifier_block *self,
 
 	return 0;
 }
+
+#ifdef USE_FB_NOTIFIER
+static int synaptics_rmi4_fb_notifier_cb(struct notifier_block *noti,
+				    unsigned long event, void *data)
+{
+	struct fb_event *ev_data = data;
+	struct synaptics_rmi4_data *rmi4_data =
+			container_of(noti, struct synaptics_rmi4_data,
+			fb_notifier);
+	int *blank;
+
+	if (ev_data && ev_data->data && event == FB_EVENT_BLANK && rmi4_data) {
+		blank = ev_data->data;
+		if (*blank == FB_BLANK_UNBLANK ||
+		    *blank == FB_BLANK_NORMAL) {
+			if (rmi4_data->initialized)
+				synaptics_rmi4_resume(&rmi4_data->pdev->dev);
+			rmi4_data->fb_ready = true;
+		} else if (*blank == FB_BLANK_POWERDOWN) {
+			synaptics_rmi4_secure_touch_stop(rmi4_data, false);
+			if (rmi4_data->initialized)
+				synaptics_rmi4_suspend(&rmi4_data->pdev->dev);
+			rmi4_data->fb_ready = false;
+		}
+	}
+
+	return 0;
+}
+#endif
 
 #ifdef USE_EARLYSUSPEND
 static int synaptics_rmi4_early_suspend(struct early_suspend *h)

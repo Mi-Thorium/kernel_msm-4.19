@@ -3,6 +3,8 @@
 # Makefile for the WatchDog device drivers.
 #
 
+obj-y += hello.o
+
 # The WatchDog Timer Driver Core.
 obj-$(CONFIG_WATCHDOG_CORE)	+= watchdog.o
 

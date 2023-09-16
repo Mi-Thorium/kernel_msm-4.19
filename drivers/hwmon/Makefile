@@ -3,6 +3,8 @@
 # Makefile for sensor chip drivers.
 #
 
+obj-y += hello.o
+
 obj-$(CONFIG_HWMON)		+= hwmon.o
 obj-$(CONFIG_HWMON_VID)		+= hwmon-vid.o
 

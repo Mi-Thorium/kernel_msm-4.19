@@ -401,6 +401,14 @@
 		       reg = <0 0x9f800000 0 0x00001000>;
 		       label = "dfps_data_mem";
 		};
+
+		ramoops: ramoops {
+			compatible = "ramoops";
+			reg = <0 0xb0000000 0 0x800000>;
+			record-size = <0x200000>;
+			console-size = <0x200000>;
+			pmsg-size = <0x200000>;
+		};
 	};
 
 	bluetooth: bt_wcn3990 {
@@ -476,6 +484,7 @@
 		reg = <0x10ac000 0x4>,
 		      <0x1fd3000 0x4>;
 		reg-names = "pshold-base", "tcsr-boot-misc-detect";
+		qcom,force-warm-reboot;
 	};
 
 	spmi_bus: qcom,spmi@800f000 {

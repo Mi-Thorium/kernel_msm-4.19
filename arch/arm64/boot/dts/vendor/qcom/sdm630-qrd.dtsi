@@ -10,6 +10,9 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
 #include "msm-pm660a.dtsi"
 #include "sdm660-pinctrl.dtsi"
 #include "sdm630-camera-sensor-qrd.dtsi"
@@ -148,7 +151,7 @@
 	};
 };
 
-/ {
+&vendor {
 	qrd_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
 
@@ -206,12 +209,6 @@
 	pinctrl-0 = <&sdc1_clk_on &sdc1_cmd_on &sdc1_data_on &sdc1_rclk_on>;
 	pinctrl-1 = <&sdc1_clk_off &sdc1_cmd_off &sdc1_data_off &sdc1_rclk_off>;
 
-	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 192000000
-								384000000>;
-
-	qcom,nonremovable;
-	qcom,bus-speed-mode = "HS400_1p8v", "HS200_1p8v", "DDR_1p8v";
-
 	status = "ok";
 };
 
@@ -248,43 +245,40 @@
 	interrupt-names = "hc_irq", "pwr_irq", "status_irq";
 	cd-gpios = <&tlmm 54 0x0>;
 
-	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000
-								200000000>;
-	qcom,bus-speed-mode = "SDR12", "SDR25", "SDR50", "DDR50", "SDR104";
-
 	status = "ok";
 };
 
 &pm660l_gpios {
 	/* GPIO 7 for VOL_UP */
-	gpio@c600 {
-		status = "ok";
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,out-strength = <1>;
+	key_vol_up {
+		key_vol_up_default: key_vol_up_default {
+			pins = "gpio7";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+		};
 	};
 };
 
 &pm660_gpios {
 	/* GPIO 11 for home key */
-	gpio@ca00 {
-		status = "ok";
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,out-strength = <1>;
+	home_key {
+		home_key_default: home_key_default {
+			pins = "gpio11";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+		};
 	};
 
 	/* GPIO 4 (NFC_CLK_REQ) */
-	gpio@c300 {
-		qcom,mode = <0>;
-		qcom,vin-sel = <1>;
-		qcom,src-sel = <0>;
-		qcom,master-en = <1>;
-		status = "okay";
+	nfc_clk {
+		nfc_clk_default: nfc_clk_default {
+			pins = "gpio4";
+			function = "normal";
+			input-enable;
+			power-source = <1>;
+		};
 	};
 };
 
@@ -303,9 +297,10 @@
 		interrupts = <28 0>;
 		interrupt-names = "nfc_irq";
 		pinctrl-names = "nfc_active", "nfc_suspend";
-		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
+		pinctrl-0 = <&nfc_int_active &nfc_enable_active
+				&nfc_clk_default>;
 		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK3_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK3_PIN>;
 		clock-names = "ref_clk";
 	};
 };
@@ -356,13 +351,15 @@
 	gpio_keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_vol_up_default>;
 		status = "ok";
 
 		vol_up {
 			label = "volume_up";
-			gpios = <&pm660l_gpios 7 0x1>;
+			gpios = <&pm660l_gpios 7 GPIO_ACTIVE_LOW>;
 			linux,input-type = <1>;
-			linux,code = <115>;
+			linux,code = <KEY_VOLUMEUP>;
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};

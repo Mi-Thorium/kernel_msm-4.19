@@ -1254,6 +1254,7 @@
 
 	ipa_hw: qcom,ipa@14780000 {
 		compatible = "qcom,ipa";
+		status = "disabled";
 		reg = <0x14780000 0x4effc>, <0x14784000 0x26934>;
 		reg-names = "ipa-base", "bam-base";
 		interrupts = <GIC_SPI 333 IRQ_TYPE_LEVEL_HIGH>,

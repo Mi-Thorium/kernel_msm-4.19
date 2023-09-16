@@ -255,7 +255,7 @@ out:
 #ifdef CONFIG_DM_VERITY_AVB
 		dm_verity_avb_error_handler();
 #endif
-		kernel_restart("dm-verity device corrupted");
+		kernel_restart("bootloader");
 	}
 
 	return 1;

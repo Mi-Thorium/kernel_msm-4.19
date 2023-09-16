@@ -191,6 +191,7 @@ int qti_virtual_sensor_register(struct device *dev)
 	static int idx;
 	struct thermal_zone_device *tz;
 
+	pr_info("qti_virtual_sensor_register begin\n");
 	sens_ct = ARRAY_SIZE(qti_virtual_sensors);
 	for (; idx < sens_ct; idx++) {
 		tz = devm_thermal_of_virtual_sensor_register(dev,
@@ -201,6 +202,7 @@ int qti_virtual_sensor_register(struct device *dev)
 		else
 			dev_dbg(dev, "sensor:%d registered\n", idx);
 	}
+	pr_info("qti_virtual_sensor_register end\n");
 
 	return 0;
 }

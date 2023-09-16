@@ -299,6 +299,7 @@ static int cpu_isolate_probe(struct platform_device *pdev)
 	struct cpu_isolate_cdev *cpu_isolate_cdev = NULL;
 	struct device_node *np = pdev->dev.of_node;
 
+	pr_info("cpu_isolate_probe begin\n");
 	INIT_LIST_HEAD(&cpu_isolate_cdev_list);
 	for_each_available_child_of_node(np, subsys_np) {
 		cpu_isolate_cdev = devm_kzalloc(&pdev->dev,
@@ -338,6 +339,7 @@ static int cpu_isolate_probe(struct platform_device *pdev)
 	cpumask_clear(&cpus_in_max_cooling_level);
 	ret = 0;
 
+	pr_info("cpu_isolate_probe end\n");
 	return ret;
 }
 

@@ -555,6 +555,8 @@ static int limits_dcvs_probe(struct platform_device *pdev)
 	const __be32 *addr;
 	bool no_cdev_register = false;
 
+	pr_info("limits_dcvs_probe begin\n");
+
 	for_each_possible_cpu(cpu) {
 		cpu_node = of_cpu_device_node_get(cpu);
 		if (!cpu_node)
@@ -754,6 +756,7 @@ probe_exit:
 		ret = 0;
 	}
 
+	pr_info("limits_dcvs_probe end\n");
 	return ret;
 
 unregister_sensor:

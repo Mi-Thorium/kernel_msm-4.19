@@ -391,6 +391,8 @@ static int adc_tm_probe(struct platform_device *pdev)
 	int ret = 0, dt_chan_num = 0, indio_chan_count = 0, i = 0;
 	u32 reg;
 
+	pr_info("adc_tm_probe begin\n");
+
 	if (!node)
 		return -EINVAL;
 
@@ -478,6 +480,7 @@ static int adc_tm_probe(struct platform_device *pdev)
 	}
 
 	list_add_tail(&adc_tm->list, &adc_tm_device_list);
+	pr_info("adc_tm_probe end\n");
 	return 0;
 fail:
 	i = 0;

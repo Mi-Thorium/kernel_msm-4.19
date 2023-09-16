@@ -729,6 +729,7 @@ static int bcl_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 
+	pr_info("bcl_probe begin\n");
 	bcl_perph = devm_kzalloc(&pdev->dev, sizeof(*bcl_perph), GFP_KERNEL);
 	if (!bcl_perph)
 		return -ENOMEM;
@@ -752,6 +753,7 @@ static int bcl_probe(struct platform_device *pdev)
 		goto bcl_probe_exit;
 	}
 
+	pr_info("bcl_probe end\n");
 	return 0;
 
 bcl_probe_exit:

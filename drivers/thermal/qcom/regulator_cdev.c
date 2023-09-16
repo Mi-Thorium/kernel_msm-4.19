@@ -115,6 +115,8 @@ static int reg_cdev_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct device_node *np;
 
+	pr_info("reg_cdev_probe begin\n");
+
 	np = dev_of_node(&pdev->dev);
 	if (!np) {
 		dev_err(&pdev->dev,
@@ -164,6 +166,7 @@ static int reg_cdev_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	pr_info("reg_cdev_probe end\n");
 	return ret;
 }
 

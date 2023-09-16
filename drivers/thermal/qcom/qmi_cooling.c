@@ -595,6 +595,8 @@ static int qmi_device_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int ret = 0, idx = 0;
 
+	pr_info("qmi_device_probe begin\n");
+
 	ret = of_get_qmi_tmd_platform_data(dev);
 	if (ret)
 		goto probe_err;
@@ -628,6 +630,7 @@ static int qmi_device_probe(struct platform_device *pdev)
 		}
 	}
 
+	pr_info("qmi_device_probe end\n");
 	return 0;
 
 probe_err:

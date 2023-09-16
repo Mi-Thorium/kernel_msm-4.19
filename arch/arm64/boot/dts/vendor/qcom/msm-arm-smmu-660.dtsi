@@ -142,7 +142,6 @@
 		qcom,dynamic;
 		qcom,skip-init;
 		qcom,use-3-lvl-tables;
-		qcom,skip-init;
 		qcom,disable-atos;
 		qcom,regulator-names = "vdd";
 		#global-interrupts = <0>;

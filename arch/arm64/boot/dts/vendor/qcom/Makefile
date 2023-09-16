@@ -1,3 +1,4 @@
+ifeq (0,1)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_KONA) += \
                 kona-cdp-overlay.dtbo \
@@ -422,7 +423,9 @@ dtb-$(CONFIG_ARCH_SDM429) += sdm429-mtp.dtb \
 	sda429-cdp.dtb
 endif
 
+else
 dtb-$(CONFIG_ARCH_SDM630) += sdm455-qrd.dtb
+endif
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)

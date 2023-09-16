@@ -155,6 +155,8 @@ enum socinfo_parttype {
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,sdm630")
 #define early_machine_is_sdm636()	\
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,sdm636")
+#define early_machine_is_sdm455()	\
+	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,sdm455")
 #define early_machine_is_bengal_iot()	\
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,bengal-iot")
 #define early_machine_is_bengalp_iot()	\
@@ -214,6 +216,7 @@ enum socinfo_parttype {
 #define early_machine_is_sdm660()	0
 #define early_machine_is_sdm630()	0
 #define early_machine_is_sdm636()	0
+#define early_machine_is_sdm455()	0
 #define early_machine_is_bengal_iot()	0
 #define early_machine_is_bengalp_iot()	0
 #define early_machine_is_msm8937()	0
@@ -246,6 +249,7 @@ enum msm_cpu {
 	MSM_CPU_SDM660,
 	MSM_CPU_SDM630,
 	MSM_CPU_SDM636,
+	MSM_CPU_SDM455,
 	MSM_CPU_SM8150,
 	MSM_CPU_SA8150,
 	MSM_CPU_KONA,

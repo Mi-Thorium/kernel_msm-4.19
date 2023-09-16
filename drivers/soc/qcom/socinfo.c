@@ -347,6 +347,9 @@ static struct msm_soc_info cpu_of_id[] = {
 	/* SDM636 ID */
 	[345] = {MSM_CPU_SDM636, "SDM636"},
 
+	/* 455 ID */
+	[385] = {MSM_CPU_SDM455, "SDM455"},
+
 	/* sm8150 ID */
 	[339] = {MSM_CPU_SM8150, "SM8150"},
 
@@ -1557,6 +1560,10 @@ static void * __init setup_dummy_socinfo(void)
 		dummy_socinfo.id = 345;
 		strlcpy(dummy_socinfo.build_id, "sdm636 - ",
 		sizeof(dummy_socinfo.build_id));
+	}  else if (early_machine_is_sdm455()) {
+		dummy_socinfo.id = 385;
+		strlcpy(dummy_socinfo.build_id, "sdm455 - ",
+			sizeof(dummy_socinfo.build_id));
 	} else if (early_machine_is_sm8150()) {
 		dummy_socinfo.id = 339;
 		strlcpy(dummy_socinfo.build_id, "sm8150 - ",

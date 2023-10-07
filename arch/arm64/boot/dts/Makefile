@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 dtstree		:= $(srctree)/$(src)
 
-vendor := $(dtstree)/vendor
+vendor := $(dtstree)/vendor-legacy
 ifeq "$(wildcard $(vendor)/Makefile)" ""
 subdir-y += actions
 subdir-y += al
@@ -33,7 +33,7 @@ subdir-y += zte
 
 
 else
-        subdir-y += vendor
+        subdir-y += vendor-legacy
 endif
 
 dtb-$(CONFIG_OF_ALL_DTBS) := $(patsubst $(dtstree)/%.dts,%.dtb, $(foreach d,$(subdir), $(wildcard $(dtstree)/$(d)/*.dts)))

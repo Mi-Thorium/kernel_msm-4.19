@@ -1,3 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # ignore all subdirs except stub
 !/stub/
+# MSM8937
+/audio-legacy
+/camera-legacy*

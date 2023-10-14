@@ -103,3 +103,14 @@ config PROC_UID
 	depends on PROC_FS && RT_MUTEXES
 	help
 	Provides aggregated per-uid information under /proc/uid.
+
+config PROC_CMDLINE_APPEND_ANDROID_FORCE_NORMAL_BOOT
+	bool "Append Android force normal boot parameter to /proc/cmdline"
+	default n
+	help
+	  If you say Y here, The parameter androidboot.force_normal_boot=1
+	  will be appended to /proc/cmdline when skip_initramfs parameter
+	  is found.
+
+	  This is a workaround, and it's generally required for Android P
+	  launched A/B devices to migrate to Android Q style System-as-root.

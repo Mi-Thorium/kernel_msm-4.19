@@ -32,3 +32,13 @@ source "lib/Kconfig"
 source "lib/Kconfig.debug"
 
 source "techpack/Kconfig"
+
+config KSU_STATIC_HOOKS
+	bool "KernelSU: Force to use static hooks"
+	default n
+	help
+	  Say Y here to force KernelSU to use static hooks.
+	  This can avoid bootloop if the kernel has broken Kprobes support.
+
+	  To use this whenever CONFIG_KPROBES=y, you'll need to execute the following command in KernelSU/kernel directory:
+	  `sed -i 's|#ifdef CONFIG_KPROBES|#if defined(CONFIG_KPROBES) \&\& !defined(CONFIG_KSU_STATIC_HOOKS)|g;s|#ifndef CONFIG_KPROBES|#if !defined(CONFIG_KPROBES) \|\| defined(CONFIG_KSU_STATIC_HOOKS)|g' *.*`

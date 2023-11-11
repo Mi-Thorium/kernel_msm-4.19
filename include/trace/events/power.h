@@ -368,6 +368,40 @@ DEFINE_EVENT(clock, clock_set_rate,
 	TP_ARGS(name, state, cpu_id)
 );
 
+#if defined(CONFIG_COMMON_CLK_MSM)
+DEFINE_EVENT(clock, clock_set_rate_complete,
+
+	TP_PROTO(const char *name, unsigned int state, unsigned int cpu_id),
+
+	TP_ARGS(name, state, cpu_id)
+);
+
+TRACE_EVENT(clock_state,
+
+	TP_PROTO(const char *name, unsigned long prepare_count,
+		unsigned long count, unsigned long rate),
+
+	TP_ARGS(name, prepare_count, count, rate),
+
+	TP_STRUCT__entry(
+		__string(name,			name)
+		__field(unsigned long,		prepare_count)
+		__field(unsigned long,		count)
+		__field(unsigned long,		rate)
+	),
+
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->prepare_count = prepare_count;
+		__entry->count = count;
+		__entry->rate = rate;
+	),
+	TP_printk("%s\t[%lu:%lu]\t%lu", __get_str(name), __entry->prepare_count,
+					 __entry->count, __entry->rate)
+
+);
+#endif /* CONFIG_COMMON_CLK_MSM */
+
 /*
  * The power domain events are used for power domains transitions
  */

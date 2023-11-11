@@ -40,7 +40,11 @@
 #include <asm/cpuidle.h>
 #include "lpm-levels.h"
 #include <trace/events/power.h>
+#if defined(CONFIG_COMMON_CLK)
 #include "../clk/clk.h"
+#elif defined(CONFIG_COMMON_CLK_MSM)
+#include "../../drivers/clk/msm/clock.h"
+#endif /* CONFIG_COMMON_CLK */
 #define CREATE_TRACE_POINTS
 #include <trace/events/trace_msm_low_power.h>
 
@@ -1745,7 +1749,11 @@ static int lpm_suspend_enter(suspend_state_t state)
 	 * which resources are enabled and preventing the system level
 	 * LPMs (XO and Vmin).
 	 */
+#ifdef CONFIG_COMMON_CLK_MSM
+	clock_debug_print_enabled(true);
+#else
 	clock_debug_print_enabled();
+#endif
 	regulator_debug_print_enabled();
 
 	cpu_prepare(lpm_cpu, idx, false);

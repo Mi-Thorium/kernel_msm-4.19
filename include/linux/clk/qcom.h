@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, 2020-2021 The Linux Foundation. All rights reserved.
  */
 
 #ifndef __LINUX_CLK_QCOM_H_
 #define __LINUX_CLK_QCOM_H_
 
+#if defined(CONFIG_COMMON_CLK_QCOM)
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
 
@@ -22,5 +23,9 @@ void qcom_clk_dump(struct clk *clk, struct regulator *regulator,
 			bool calltrace);
 void qcom_clk_bulk_dump(int num_clks, struct clk_bulk_data *clks,
 			struct regulator *regulator, bool calltrace);
+
+#elif defined(CONFIG_COMMON_CLK_MSM)
+#include <linux/clk/msm-clk.h>
+#endif /* CONFIG_COMMON_CLK_QCOM */
 
 #endif  /* __LINUX_CLK_QCOM_H_ */

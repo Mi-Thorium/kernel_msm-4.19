@@ -1,0 +1,41 @@
+choice
+	prompt "Clock framework to use"
+	depends on (ARCH_MSM8937 || ARCH_MSM8953)
+	default USE_COMMON_CLK_QCOM
+
+config USE_COMMON_CLK_QCOM
+	bool "Use QCOM clk framework"
+	select COMMON_CLK
+	select COMMON_CLK_QCOM
+	select QCOM_GDSC if ARCH_MSM8953
+
+config USE_COMMON_CLK_MSM
+	bool "Use MSM clk framework"
+	select CLKDEV_LOOKUP
+	select HAVE_CLK
+	select HAVE_CLK_PREPARE
+	select COMMON_CLK_MSM
+
+endchoice
+
+config COMMON_CLK_MSM
+	tristate "Support for MSM clock controllers"
+	depends on !COMMON_CLK
+	depends on OF
+	depends on ARCH_QCOM
+	select RATIONAL
+	help
+	  This support clock controller used by MSM devices which support
+	  global, mmss and gpu clock controller.
+	  Say Y if you want to support the clocks exposed by the MSM on
+	  platforms such as msm8953 etc.
+
+config MSM_CLK_CONTROLLER_V2
+	bool "QTI clock driver"
+	depends on COMMON_CLK_MSM
+	---help---
+	   Generate clock data structures from definitions found in
+	   device tree.
+
+source "drivers/clk/msm/mdss/Kconfig"
+

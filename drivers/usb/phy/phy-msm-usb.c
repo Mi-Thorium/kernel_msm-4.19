@@ -4140,6 +4140,10 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 	return pdata;
 }
 
+#if IS_ENABLED(CONFIG_MACH_XIAOMI_MSM8937) && IS_ENABLED(CONFIG_MSM_USB_POWER_SUPPLY_MI8937)
+extern void msm_usb_psy_register_psy_external_call(void);
+#endif
+
 static int msm_otg_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -4876,6 +4880,11 @@ static int msm_otg_probe(struct platform_device *pdev)
 	motg->pm_notify.notifier_call = msm_otg_pm_notify;
 	register_pm_notifier(&motg->pm_notify);
 	msm_otg_dbg_log_event(phy, "OTG PROBE", motg->caps, motg->lpm_flags);
+
+#if IS_ENABLED(CONFIG_MACH_XIAOMI_MSM8937) && IS_ENABLED(CONFIG_MSM_USB_POWER_SUPPLY_MI8937)
+	if (xiaomi_msm8937_mach_get())
+		msm_usb_psy_register_psy_external_call();
+#endif
 
 	return 0;
 
